@@ -21,7 +21,6 @@
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text)}
 #app{display:flex;flex-direction:column;height:100vh}
 
-/* Header */
 #header{display:flex;align-items:center;gap:10px;padding:0 14px;height:44px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;user-select:none}
 #logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;color:var(--accent)}
 #sync-status{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);border:1px solid var(--border2)}
@@ -29,15 +28,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text)}
 #sync-status.syncing{border-color:var(--warn-bg);color:var(--warn)}
 #sync-status.offline{border-color:#7f3030;color:var(--danger)}
 #save-status{font-size:11px;color:var(--text3);margin-left:auto}
-#hdr-div{width:1px;height:20px;background:var(--border)}
+.hdr-div{width:1px;height:20px;background:var(--border)}
 
-/* Project selector */
 #project-bar{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;font-size:12px}
 #project-bar label{color:var(--text3)}
 #project-bar input{height:26px;font-size:12px;padding:0 8px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);width:160px}
 #project-bar input:focus{outline:none;border-color:var(--accent)}
 
-/* Toolbar */
 #toolbar{display:flex;align-items:center;gap:3px;flex-wrap:wrap;padding:5px 10px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0}
 .tg{display:flex;align-items:center;gap:4px;padding-right:10px;margin-right:2px;border-right:1px solid var(--border)}
 .tg:last-child{border-right:none}
@@ -48,21 +45,14 @@ button.active{background:var(--accent-bg);border-color:var(--accent);color:var(-
 button.danger{border-color:#7f3030;color:var(--danger)}
 button.danger:hover{background:var(--danger-bg);border-color:var(--danger)}
 
-/* Layer pills */
-#layer-toggle{display:flex;gap:4px}
 .lt-pill{height:26px;padding:0 10px;border-radius:13px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--surface);color:var(--text2);transition:all .1s}
 .lt-pill.on-existing{background:#2a1f0a;border-color:#c87a30;color:#f97316}
 .lt-pill.on-new{background:#0a1f2a;border-color:#3080c8;color:#60a5fa}
+.lt-pill.on-elev{background:#1a1a3d;border-color:#7060c8;color:#c084fc}
 
-/* Main */
 #main{display:flex;flex:1;overflow:hidden;min-height:0}
 #map{flex:1;position:relative;z-index:0}
 
-/* Drawing canvas over map */
-#draw-canvas{position:absolute;top:0;left:0;pointer-events:none;z-index:400}
-#draw-canvas.active{pointer-events:all}
-
-/* Sidebar */
 #sidebar{width:270px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;z-index:500}
 #sidebar-tabs{display:flex;border-bottom:1px solid var(--border)}
 .stab{flex:1;height:34px;border:none;border-radius:0;background:transparent;color:var(--text2);font-size:12px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
@@ -71,11 +61,9 @@ button.danger:hover{background:var(--danger-bg);border-color:var(--danger)}
 .tab-pane{display:none;flex:1;overflow-y:auto;flex-direction:column}
 .tab-pane.visible{display:flex}
 
-/* Summary */
 #sum-wrap{padding:10px 12px;flex:1;overflow-y:auto}
 .sum-block{margin-bottom:14px}
 .sum-block-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
-#scale-info-text{font-size:11px;color:var(--text2);padding:5px 8px;background:var(--surface2);border-radius:var(--radius);border-left:2px solid var(--accent)}
 table.sum-t{width:100%;border-collapse:collapse;font-size:11px}
 table.sum-t th{color:var(--text3);font-weight:400;text-align:right;padding:2px 3px;font-size:10px}
 table.sum-t th:first-child{text-align:left}
@@ -83,26 +71,37 @@ table.sum-t td{color:var(--text);padding:4px 3px;text-align:right;font-variant-n
 table.sum-t td:first-child{text-align:left}
 table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font-weight:600;padding-top:5px}
 .c-buy{color:var(--danger)}.c-ok{color:var(--accent)}.c-warn{color:var(--warn)}
+
 #reuse-balance{margin-top:6px}
 .rb-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:var(--radius);margin-bottom:4px;font-size:11px;background:var(--surface2)}
 .rb-size{display:flex;align-items:center;gap:5px;font-weight:500}
 .rb-dot{width:8px;height:8px;border-radius:50%}
-.rb-nums{display:flex;gap:8px;font-size:10px;color:var(--text2)}
+.rb-nums{display:flex;gap:6px;font-size:10px;color:var(--text2)}
 .rb-status{font-size:10px;font-weight:600;padding:2px 6px;border-radius:8px}
 .rb-ok{background:var(--accent-bg);color:var(--accent)}
 .rb-warn{background:var(--warn-bg);color:var(--warn)}
 .rb-surplus{background:#1a3d2a;color:#86efac}
+
+/* Proximity alert banner */
+#prox-banner{display:none;margin:0 12px 10px;padding:8px 10px;border-radius:var(--radius);background:var(--warn-bg);border:1px solid #7f5a00;font-size:11px;color:var(--warn)}
+#prox-banner.visible{display:block}
+#prox-banner strong{display:block;margin-bottom:4px}
+#prox-banner .pb-btns{display:flex;gap:5px;margin-top:6px}
+#prox-banner .pb-btns button{flex:1;height:24px;font-size:11px}
+.pb-confirm{border-color:var(--accent)!important;color:var(--accent)!important}
+.pb-confirm:hover{background:var(--accent-bg)!important}
+
 .legend{display:flex;flex-direction:column;gap:5px}
 .legend-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)}
 .ll{width:26px;height:3px;flex-shrink:0}
 .export-row{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:5px}
 .export-row button{flex:1;font-size:11px}
 
-/* Segments */
 #seg-list{flex:1;overflow-y:auto;padding:6px}
 .seg-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:3px;font-size:11px;cursor:pointer;background:var(--surface2)}
 .seg-item:hover{border-color:var(--border2)}
 .seg-item.sel{border-color:var(--accent);background:var(--accent-bg)}
+.seg-item.needs-review{border-color:var(--warn)}
 .seg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .seg-body{flex:1;min-width:0}
 .seg-title{font-weight:500;color:var(--text);margin-bottom:1px}
@@ -110,11 +109,13 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
 .seg-badge{font-size:10px;padding:1px 5px;border-radius:8px}
 .sb-good{background:#1a3d2a;color:#4ade80}
 .sb-replace{background:#3d1a1a;color:#f87171}
-.sb-reuse{background:#2a1a3d;color:#c084fc}
-.sb-new{background:#0a1f2a;color:#60a5fa}
+.sb-required{background:#0a1f2a;color:#60a5fa}
+.sb-update{background:#2a2a0a;color:#fbbf24}
+.sb-undecided{background:#2a2a2a;color:#aaa}
 .seg-del{color:var(--text3);cursor:pointer;font-size:15px;line-height:1;padding:0 2px;flex-shrink:0}
 .seg-del:hover{color:var(--danger)}
 #seg-empty{padding:14px 10px;font-size:11px;color:var(--text3);text-align:center;line-height:1.6}
+
 #edit-panel{border-top:1px solid var(--border);padding:10px 12px;background:var(--surface2);display:none;flex-shrink:0}
 #edit-panel.visible{display:block}
 .ep-title{font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
@@ -126,14 +127,16 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
 .ep-apply{border-color:var(--accent)!important;color:var(--accent)!important}
 .ep-apply:hover{background:var(--accent-bg)!important}
 
-/* Tip bar */
 #tipbar{position:absolute;bottom:0;left:0;right:270px;background:#0009;padding:4px 12px;font-size:11px;color:var(--text2);pointer-events:none;z-index:500}
+
+/* Elevation marker popup override */
+.elev-popup .leaflet-popup-content-wrapper{background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);font-size:11px;font-family:inherit;padding:0}
+.elev-popup .leaflet-popup-content{margin:8px 10px}
+.elev-popup .leaflet-popup-tip{background:var(--surface)}
 
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-
-/* Leaflet overrides */
 .leaflet-container{background:#1a2e1a}
 .leaflet-control-zoom a{background:var(--surface)!important;color:var(--text)!important;border-color:var(--border2)!important}
 .leaflet-control-zoom a:hover{background:var(--surface2)!important}
@@ -152,12 +155,13 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
     </svg>
     PipeMap
   </div>
-  <div id="hdr-div"></div>
-  <div id="layer-toggle">
+  <div class="hdr-div"></div>
+  <div id="layer-toggle" style="display:flex;gap:4px">
     <button class="lt-pill on-existing" id="lt-existing" onclick="toggleLayer('existing')">&#9679; Existing</button>
     <button class="lt-pill on-new"      id="lt-new"      onclick="toggleLayer('new')">&#9679; New layout</button>
+    <button class="lt-pill on-elev"     id="lt-elev"     onclick="toggleLayer('elev')">&#9651; Elevation</button>
   </div>
-  <div id="hdr-div"></div>
+  <div class="hdr-div"></div>
   <span id="sync-status" class="offline">&#9679; offline</span>
   <span id="save-status">not saved</span>
 </div>
@@ -166,7 +170,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
   <label>Project:</label>
   <input type="text" id="project-id" value="mafraq-farm-1" placeholder="project name">
   <button onclick="switchProject()" style="height:26px;font-size:11px">Load / Create</button>
-  <span style="font-size:11px;color:var(--text3);margin-left:6px">Share this project name with collaborators — everyone on the same name sees the same map live.</span>
+  <span style="font-size:11px;color:var(--text3);margin-left:6px">Share this project name with collaborators for live sync.</span>
 </div>
 
 <div id="toolbar">
@@ -174,10 +178,11 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
     <label>Mode</label>
     <button id="btn-draw"   onclick="setMode('draw')">&#9998; Draw pipe</button>
     <button id="btn-select" onclick="setMode('select')">&#8592; Select</button>
+    <button id="btn-elev"   onclick="setMode('elev')" title="Click map to drop elevation point">&#9651; Elev point</button>
   </div>
   <div class="tg">
     <label>Layer</label>
-    <select id="sel-layer" onchange="syncStatusOptions()">
+    <select id="sel-layer" onchange="onLayerChange()">
       <option value="existing">Existing layout</option>
       <option value="new">New layout</option>
     </select>
@@ -188,6 +193,8 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
       <option value="5">5 inch</option>
       <option value="4">4 inch</option>
       <option value="3">3 inch</option>
+      <option value="2">2 inch</option>
+      <option value="20mm">20 mm</option>
     </select>
   </div>
   <div class="tg" id="tg-status">
@@ -198,15 +205,22 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
     </select>
   </div>
   <div class="tg">
+    <label>Proximity</label>
+    <select id="sel-prox-thresh" title="Max distance to existing pipe to auto-classify as Update">
+      <option value="3">3 m</option>
+      <option value="5" selected>5 m</option>
+      <option value="10">10 m</option>
+      <option value="15">15 m</option>
+    </select>
+  </div>
+  <div class="tg">
     <button onclick="undo()">&#8617; Undo</button>
     <button class="danger" onclick="clearAll()">Clear all</button>
   </div>
 </div>
 
 <div id="main">
-  <div id="map">
-    <canvas id="draw-canvas"></canvas>
-  </div>
+  <div id="map"></div>
 
   <div id="sidebar">
     <div id="sidebar-tabs">
@@ -214,32 +228,50 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
       <button class="stab"        id="tab-btn-segments" onclick="switchTab('segments')">Segments</button>
     </div>
 
+    <!-- Summary tab -->
     <div id="tab-summary" class="tab-pane visible">
       <div id="sum-wrap">
-        <div class="sum-block">
-          <div class="sum-block-title">Procurement</div>
-          <table class="sum-t">
-            <thead><tr><th>Size</th><th>Stock (good)</th><th>Required</th><th>Buy</th></tr></thead>
-            <tbody id="sum-body"></tbody>
-            <tfoot><tr><td>Total</td><td id="ft-stock">—</td><td id="ft-required">—</td><td id="ft-buy">—</td></tr></tfoot>
-          </table>
-          <p style="font-size:10px;color:var(--text3);margin-top:5px">Buy = max(0, Required − Stock). All lengths in metres.</p>
+
+        <div id="prox-banner">
+          <strong>&#9888; Review needed</strong>
+          <span id="prox-banner-msg"></span>
+          <div class="pb-btns">
+            <button class="pb-confirm" onclick="confirmProx('update')">&#10003; Mark as Update</button>
+            <button onclick="confirmProx('required')">Mark as New pipe</button>
+          </div>
         </div>
 
         <div class="sum-block">
-          <div class="sum-block-title">Reuse balance</div>
+          <div class="sum-block-title">Procurement</div>
+          <table class="sum-t">
+            <thead><tr><th>Size</th><th>Stock</th><th>Required</th><th>Update</th><th>Buy</th></tr></thead>
+            <tbody id="sum-body"></tbody>
+            <tfoot><tr><td>Total</td><td id="ft-stock">—</td><td id="ft-req">—</td><td id="ft-upd">—</td><td id="ft-buy">—</td></tr></tfoot>
+          </table>
+          <p style="font-size:10px;color:var(--text3);margin-top:5px">Buy = max(0, Required − Stock). Updates reuse existing trench, still need pipe.</p>
+        </div>
+
+        <div class="sum-block">
+          <div class="sum-block-title">Stock balance</div>
           <div id="reuse-balance"></div>
+        </div>
+
+        <div class="sum-block">
+          <div class="sum-block-title">Elevation points</div>
+          <div id="elev-list-sum" style="font-size:11px;color:var(--text3)">No elevation points yet.</div>
         </div>
 
         <div class="sum-block">
           <div class="sum-block-title">Legend</div>
           <div class="legend">
             <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Existing layout</div>
-            <div class="legend-row"><div class="ll" style="background:#4ade80"></div>Good pipe (reusable stock)</div>
+            <div class="legend-row"><div class="ll" style="background:#4ade80"></div>Good (reusable stock)</div>
             <div class="legend-row"><div class="ll" style="background:repeating-linear-gradient(to right,#f87171 0 8px,transparent 8px 14px)"></div>Damaged — discard</div>
             <div style="font-size:10px;color:var(--text3);margin:5px 0 3px">New layout</div>
-            <div class="legend-row"><div class="ll" style="background:#60a5fa"></div>Required run (auto-calculated)</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:5px">Line thickness = pipe diameter</div>
+            <div class="legend-row"><div class="ll" style="background:#60a5fa"></div>New pipe (auto: far from existing)</div>
+            <div class="legend-row"><div class="ll" style="background:#fbbf24"></div>Update (auto: near existing pipe)</div>
+            <div class="legend-row"><div class="ll" style="background:#aaa"></div>Undecided — review needed</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:5px">Thickness = diameter &nbsp;·&nbsp; &#9651; = elevation point</div>
           </div>
         </div>
       </div>
@@ -248,10 +280,11 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
       </div>
     </div>
 
+    <!-- Segments tab -->
     <div id="tab-segments" class="tab-pane">
       <div id="seg-list"></div>
       <div id="edit-panel">
-        <div class="ep-title">Edit selected segment</div>
+        <div class="ep-title">Edit segment</div>
         <div class="ep-row"><label>Layer</label>
           <select id="ep-layer" onchange="onEditLayerChange()">
             <option value="existing">Existing</option>
@@ -263,6 +296,8 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
             <option value="5">5 inch</option>
             <option value="4">4 inch</option>
             <option value="3">3 inch</option>
+            <option value="2">2 inch</option>
+            <option value="20mm">20 mm</option>
           </select>
         </div>
         <div class="ep-row" id="ep-status-row"><label>Status</label>
@@ -271,24 +306,32 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
             <option value="replace">Damaged — discard</option>
           </select>
         </div>
+        <div class="ep-row" id="ep-newtype-row" style="display:none"><label>Type</label>
+          <select id="ep-newtype">
+            <option value="required">New pipe</option>
+            <option value="update">Update (near existing)</option>
+            <option value="undecided">Undecided</option>
+          </select>
+        </div>
         <div class="ep-actions">
           <button class="ep-apply" onclick="applyEdit()">&#10003; Apply</button>
           <button class="danger"   onclick="deleteSelected()">&#215; Delete</button>
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
-<div id="tipbar">Draw pipe: click to add points, double-click to finish &nbsp;·&nbsp; Select: click a pipe to edit it &nbsp;·&nbsp; Scroll to zoom</div>
+<div id="tipbar" id="tipbar">Draw: click points, double-click to finish &nbsp;·&nbsp; Select: click pipe &nbsp;·&nbsp; Elev: click map for elevation &nbsp;·&nbsp; Scroll to zoom</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module">
-import { initializeApp }                        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, get }  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { initializeApp }                       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set }      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// ── Firebase config ────────────────────────────────────
+// ── Firebase ───────────────────────────────────────────
 const firebaseConfig = {
   apiKey:            "AIzaSyAkqts691Hg1uXhLDRloKoAgNotCwYx6XY",
   authDomain:        "pipemap-45e15.firebaseapp.com",
@@ -298,394 +341,506 @@ const firebaseConfig = {
   messagingSenderId: "172642929084",
   appId:             "1:172642929084:web:11605fc95947cbbb3403b9"
 };
-const fbApp = initializeApp(firebaseConfig);
-const db    = getDatabase(fbApp);
+const fbApp  = initializeApp(firebaseConfig);
+const db     = getDatabase(fbApp);
 
 // ── State ──────────────────────────────────────────────
-let segments    = [];
-let selectedId  = null;
-let mode        = 'select';
-let layerVisible= { existing:true, new:true };
-let history     = [];
-let segCounter  = 1;
-let currentPts  = [];
-let projectId   = 'mafraq-farm-1';
-let fbUnsub     = null;
-let ignoreNext  = false;   // prevent echo when we push our own write
+let segments     = [];
+let elevPoints   = [];         // {id, lat, lng, elev, label}
+let selectedId   = null;
+let pendingProxId= null;       // segment id awaiting prox review
+let mode         = 'select';
+let layerVisible = {existing:true, new:true, elev:true};
+let history      = [];
+let segCounter   = 1;
+let elevCounter  = 1;
+let currentPts   = [];
+let projectId    = 'mafraq-farm-1';
+let fbUnsub      = null;
+let ignoreNext   = false;
+let drawMarkers  = [];
 
-const PIPE_COLOR = { '5':'#f97316','4':'#4ade80','3':'#60a5fa' };
-const PIPE_WIDTH = { '5':5,'4':3.2,'3':2 };
+// ── Visual config ──────────────────────────────────────
+const PIPE_COLOR = {'5':'#f97316','4':'#4ade80','3':'#60a5fa','2':'#e879f9','20mm':'#94a3b8'};
+const PIPE_WIDTH = {'5':5,'4':3.5,'3':2.5,'2':1.8,'20mm':1.2};
 
 function segStyle(status){
   switch(status){
-    case 'good':     return {color:null,      dash:null,   alpha:1.0};
-    case 'replace':  return {color:'#f87171', dash:[10,6], alpha:0.9};
-    case 'required': return {color:'#60a5fa', dash:null,   alpha:1.0};
+    case 'good':      return {color:null,      dash:null,   alpha:1.0};
+    case 'replace':   return {color:'#f87171', dash:[10,6], alpha:0.9};
+    case 'required':  return {color:'#60a5fa', dash:null,   alpha:1.0};
+    case 'update':    return {color:'#fbbf24', dash:null,   alpha:1.0};
+    case 'undecided': return {color:'#aaaaaa', dash:[3,3],  alpha:0.8};
   }
   return {color:'#888',dash:null,alpha:1};
 }
 
 // ── Leaflet map ────────────────────────────────────────
-const map = L.map('map',{
-  center:[32.35, 36.20],   // Mafraq region
-  zoom:15,
-  zoomControl:true,
-  attributionControl:true
-});
-
-// Google satellite tiles
+const map = L.map('map',{center:[32.35,36.20],zoom:15,zoomControl:true});
 L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
-  attribution:'Map data &copy; Google',
-  maxZoom:21,
-  maxNativeZoom:21
+  attribution:'Map data &copy; Google', maxZoom:21, maxNativeZoom:21
 }).addTo(map);
 
-// ── SVG overlay via Leaflet SVG layer ─────────────────
-// We use a custom Leaflet layer that redraws on every map move
+// ── SVG pipe layer ─────────────────────────────────────
 const PipeLayer = L.Layer.extend({
   onAdd(map){
-    this._map = map;
-    const pane = map.getPane('overlayPane');
-    this._svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    this._map=map;
+    const pane=map.getPane('overlayPane');
+    this._svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
     this._svg.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:400;overflow:visible';
     pane.appendChild(this._svg);
-    map.on('movestart zoom', ()=>{ this._svg.style.display='none'; });
-    map.on('moveend zoomend viewreset', ()=>{ this._svg.style.display=''; this._redraw(); });
+    map.on('movestart zoom',()=>this._svg.style.display='none');
+    map.on('moveend zoomend viewreset',()=>{this._svg.style.display='';this._redraw();});
     this._redraw();
   },
-  onRemove(map){ this._svg.remove(); },
+  onRemove(){ this._svg.remove(); },
   redraw(){ this._redraw(); },
   _redraw(){
-    const svg = this._svg;
+    const svg=this._svg;
     while(svg.firstChild) svg.removeChild(svg.firstChild);
-    // Draw existing layer first, new layout on top
     ['existing','new'].forEach(layer=>{
       if(!layerVisible[layer]) return;
       segments.filter(s=>s.layer===layer).forEach(seg=>this._drawSeg(svg,seg));
     });
-    // Ghost line
-    if(mode==='draw' && currentPts.length>1){
-      const pts = currentPts.map(ll=>this._map.latLngToLayerPoint(ll));
-      const pl = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-      pl.setAttribute('points', pts.map(p=>`${p.x},${p.y}`).join(' '));
-      pl.setAttribute('stroke','#ffffff88');
-      pl.setAttribute('stroke-width','1.5');
-      pl.setAttribute('stroke-dasharray','4 4');
-      pl.setAttribute('fill','none');
+    if(mode==='draw'&&currentPts.length>1){
+      const pts=currentPts.map(ll=>this._map.latLngToLayerPoint(L.latLng(ll[0],ll[1])));
+      const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+      pl.setAttribute('points',pts.map(p=>`${p.x},${p.y}`).join(' '));
+      pl.setAttribute('stroke','#ffffff88');pl.setAttribute('stroke-width','1.5');
+      pl.setAttribute('stroke-dasharray','4 4');pl.setAttribute('fill','none');
       svg.appendChild(pl);
     }
   },
-  _drawSeg(svg, seg){
+  _drawSeg(svg,seg){
     if(!seg.latlngs||seg.latlngs.length<2) return;
-    const pts   = seg.latlngs.map(ll=>this._map.latLngToLayerPoint(L.latLng(ll[0],ll[1])));
-    const isSel = seg.id===selectedId;
-    const st    = segStyle(seg.status);
-    const col   = st.color||PIPE_COLOR[seg.dia]||'#888';
-    const lw    = (PIPE_WIDTH[seg.dia]||2)+(isSel?2:0);
-
+    const pts=seg.latlngs.map(ll=>this._map.latLngToLayerPoint(L.latLng(ll[0],ll[1])));
+    const isSel=seg.id===selectedId;
+    const st=segStyle(seg.status);
+    const col=st.color||PIPE_COLOR[seg.dia]||'#888';
+    const lw=(PIPE_WIDTH[seg.dia]||2)+(isSel?2:0);
     if(isSel){
-      const glow = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-      glow.setAttribute('points', pts.map(p=>`${p.x},${p.y}`).join(' '));
-      glow.setAttribute('stroke',col); glow.setAttribute('stroke-width',lw+6);
-      glow.setAttribute('stroke-opacity','0.25'); glow.setAttribute('fill','none');
-      glow.setAttribute('stroke-linecap','round'); glow.setAttribute('stroke-linejoin','round');
-      svg.appendChild(glow);
+      const g=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+      g.setAttribute('points',pts.map(p=>`${p.x},${p.y}`).join(' '));
+      g.setAttribute('stroke',col);g.setAttribute('stroke-width',String(lw+6));
+      g.setAttribute('stroke-opacity','0.2');g.setAttribute('fill','none');
+      g.setAttribute('stroke-linecap','round');svg.appendChild(g);
     }
-    const pl = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-    pl.setAttribute('points', pts.map(p=>`${p.x},${p.y}`).join(' '));
+    const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+    pl.setAttribute('points',pts.map(p=>`${p.x},${p.y}`).join(' '));
     pl.setAttribute('stroke',col);
-    pl.setAttribute('stroke-width', String(lw));
-    pl.setAttribute('stroke-opacity', String(st.alpha));
-    if(st.dash) pl.setAttribute('stroke-dasharray', st.dash.join(' '));
+    pl.setAttribute('stroke-width',String(lw));
+    pl.setAttribute('stroke-opacity',String(st.alpha));
+    if(st.dash) pl.setAttribute('stroke-dasharray',st.dash.join(' '));
     pl.setAttribute('fill','none');
-    pl.setAttribute('stroke-linecap','round');
-    pl.setAttribute('stroke-linejoin','round');
-    pl.style.cursor = mode==='select'?'pointer':'inherit';
-    pl.addEventListener('click', ev=>{ if(mode==='select'){ ev.stopPropagation(); selectedId=seg.id; switchTab('segments'); renderSegList(); pipeLayer.redraw(); }});
+    pl.setAttribute('stroke-linecap','round');pl.setAttribute('stroke-linejoin','round');
+    pl.style.cursor=mode==='select'?'pointer':'inherit';
+    pl.style.pointerEvents='stroke';
+    pl.addEventListener('click',ev=>{
+      if(mode==='select'){ev.stopPropagation();selectedId=seg.id;switchTab('segments');renderSegList();pipeLayer.redraw();}
+    });
     svg.appendChild(pl);
-
-    // Dots on vertices for selected
-    if(isSel){
-      pts.forEach(p=>{
-        const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
-        c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','4');
-        c.setAttribute('fill',col); svg.appendChild(c);
-      });
+    if(isSel) pts.forEach(p=>{
+      const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r','4');
+      c.setAttribute('fill',col);svg.appendChild(c);
+    });
+    // Undecided warning dot
+    if(seg.status==='undecided'){
+      const mid=pts[Math.floor(pts.length/2)];
+      const w=document.createElementNS('http://www.w3.org/2000/svg','text');
+      w.setAttribute('x',mid.x);w.setAttribute('y',mid.y-8);
+      w.setAttribute('text-anchor','middle');w.setAttribute('font-size','12');
+      w.setAttribute('fill','#fbbf24');w.textContent='?';
+      svg.appendChild(w);
     }
   }
 });
-const pipeLayer = new PipeLayer();
+const pipeLayer=new PipeLayer();
 pipeLayer.addTo(map);
 
-// ── Drawing interaction ────────────────────────────────
-let drawMarkers = [];
+// ── Elevation markers ──────────────────────────────────
+const elevMarkers={};
+const elevIcon = L.divIcon({
+  html:'<div style="width:10px;height:10px;background:#c084fc;border:2px solid #fff;border-radius:50%;margin:-5px 0 0 -5px"></div>',
+  className:'', iconSize:[10,10]
+});
 
-function setMode(m){
-  if(mode==='draw' && currentPts.length>1) finishSegment();
-  currentPts=[]; drawMarkers.forEach(mk=>mk.remove()); drawMarkers=[];
-  mode=m;
-  ['draw','select'].forEach(id=>document.getElementById('btn-'+id).classList.toggle('active',id===m));
-  map.dragging[m==='draw'?'disable':'enable']();
-  document.getElementById('map').style.cursor = m==='draw'?'crosshair':'';
-  pipeLayer.redraw();
+function renderElevMarkers(){
+  // Remove old
+  Object.values(elevMarkers).forEach(m=>m.remove());
+  for(const k in elevMarkers) delete elevMarkers[k];
+  if(!layerVisible.elev) return;
+  elevPoints.forEach(ep=>{
+    const mk=L.marker([ep.lat,ep.lng],{icon:elevIcon})
+      .bindPopup(`<b>${ep.label}</b><br>${ep.elev!==null?ep.elev+'m asl':'fetching...'}`,{className:'elev-popup'})
+      .addTo(map);
+    elevMarkers[ep.id]=mk;
+  });
+  updateElevSummary();
 }
 
-map.on('click', e=>{
-  if(mode!=='draw') return;
-  currentPts.push([e.latlng.lat, e.latlng.lng]);
-  // small dot marker
-  const mk = L.circleMarker(e.latlng,{radius:4,color:'#fff',fillColor:'#fff',fillOpacity:1,weight:1}).addTo(map);
-  drawMarkers.push(mk);
-  pipeLayer.redraw();
+async function fetchElevation(lat,lng){
+  try{
+    const res=await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat.toFixed(6)},${lng.toFixed(6)}`);
+    const data=await res.json();
+    return data.results[0].elevation;
+  }catch(e){ return null; }
+}
+
+// ── Map interaction ────────────────────────────────────
+map.on('click', async e=>{
+  if(mode==='draw'){
+    currentPts.push([e.latlng.lat,e.latlng.lng]);
+    const mk=L.circleMarker(e.latlng,{radius:4,color:'#fff',fillColor:'#fff',fillOpacity:1,weight:1}).addTo(map);
+    drawMarkers.push(mk);
+    pipeLayer.redraw();
+  } else if(mode==='elev'){
+    const id=Date.now()+'_e'+Math.random().toString(36).slice(2,5);
+    const ep={id, lat:e.latlng.lat, lng:e.latlng.lng, elev:null, label:'P'+elevCounter++};
+    elevPoints.push(ep);
+    renderElevMarkers();
+    pushToFirebase();
+    // Async fetch
+    const elev=await fetchElevation(e.latlng.lat,e.latlng.lng);
+    if(elev!==null){
+      ep.elev=elev;
+    } else {
+      const manual=prompt(`Could not auto-fetch elevation for ${ep.label}.\nEnter elevation in metres (or cancel to leave blank):`);
+      ep.elev = manual!==null&&manual.trim()!=='' ? parseFloat(manual) : null;
+    }
+    renderElevMarkers();
+    // Update popup
+    if(elevMarkers[ep.id]) elevMarkers[ep.id].setPopupContent(`<b>${ep.label}</b><br>${ep.elev!==null?ep.elev+'m asl':'unknown'}`);
+    pushToFirebase();
+  } else if(mode==='select'){
+    selectedId=null; renderSegList(); pipeLayer.redraw();
+  }
 });
 
-map.on('dblclick', e=>{
-  if(mode!=='draw') return;
-  L.DomEvent.stopPropagation(e);
-  if(currentPts.length>1) finishSegment();
+map.on('dblclick',e=>{
+  if(mode==='draw'&&currentPts.length>1){L.DomEvent.stopPropagation(e);finishSegment();}
 });
 
-map.on('mousemove', e=>{
+map.on('mousemove',e=>{
   if(mode!=='draw'||currentPts.length===0) return;
   pipeLayer.redraw();
-  // ghost to cursor
-  const svg = pipeLayer._svg;
-  if(!svg) return;
-  const last = map.latLngToLayerPoint(L.latLng(currentPts[currentPts.length-1][0],currentPts[currentPts.length-1][1]));
-  const cur  = map.latLngToLayerPoint(e.latlng);
-  const pl   = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  const svg=pipeLayer._svg; if(!svg) return;
+  const last=map.latLngToLayerPoint(L.latLng(currentPts[currentPts.length-1][0],currentPts[currentPts.length-1][1]));
+  const cur=map.latLngToLayerPoint(e.latlng);
+  const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
   pl.setAttribute('points',`${last.x},${last.y} ${cur.x},${cur.y}`);
-  pl.setAttribute('stroke','#ffffff88'); pl.setAttribute('stroke-width','1.5');
-  pl.setAttribute('stroke-dasharray','4 4'); pl.setAttribute('fill','none');
+  pl.setAttribute('stroke','#ffffff88');pl.setAttribute('stroke-width','1.5');
+  pl.setAttribute('stroke-dasharray','4 4');pl.setAttribute('fill','none');
   svg.appendChild(pl);
 });
 
-// Click on map in select mode deselects
-map.on('click', e=>{
-  if(mode==='select'){ selectedId=null; renderSegList(); pipeLayer.redraw(); }
-});
-
-// ── Segment operations ─────────────────────────────────
-function finishSegment(){
-  if(currentPts.length<2){ currentPts=[]; drawMarkers.forEach(m=>m.remove()); drawMarkers=[]; return; }
-  pushHistory();
-  const layer  = document.getElementById('sel-layer').value;
-  const status = layer==='new' ? 'required' : document.getElementById('sel-status').value;
-  const seg={
-    id: Date.now()+'_'+Math.random().toString(36).slice(2,7),
-    latlngs: [...currentPts],
-    dia:    document.getElementById('sel-dia').value,
-    layer,
-    status,
-    label:  'Seg '+segCounter++
-  };
-  segments.push(seg);
-  selectedId=seg.id;
-  currentPts=[]; drawMarkers.forEach(m=>m.remove()); drawMarkers=[];
-  pushToFirebase();
-  updateSummary(); renderSegList(); pipeLayer.redraw();
+// ── Mode ───────────────────────────────────────────────
+function setMode(m){
+  if(mode==='draw'&&currentPts.length>1) finishSegment();
+  currentPts=[]; drawMarkers.forEach(mk=>mk.remove()); drawMarkers=[];
+  mode=m;
+  ['draw','select','elev'].forEach(id=>{
+    const b=document.getElementById('btn-'+id);
+    if(b) b.classList.toggle('active',id===m);
+  });
+  map.dragging[m==='draw'?'disable':'enable']();
+  document.getElementById('map').style.cursor=m==='draw'||m==='elev'?'crosshair':'';
+  pipeLayer.redraw();
 }
+window.setMode=setMode;
 
-function deleteSeg(idx,e){
-  e.stopPropagation(); pushHistory();
-  if(selectedId===segments[idx].id) selectedId=null;
-  segments.splice(idx,1);
-  pushToFirebase(); updateSummary(); renderSegList(); pipeLayer.redraw();
+function onLayerChange(){
+  const layer=document.getElementById('sel-layer').value;
+  document.getElementById('tg-status').style.display=layer==='new'?'none':'';
 }
+window.onLayerChange=onLayerChange;
 
-function deleteSelected(){
-  const idx=segments.findIndex(s=>s.id===selectedId); if(idx===-1) return;
-  pushHistory(); segments.splice(idx,1); selectedId=null;
-  pushToFirebase(); updateSummary(); renderSegList(); pipeLayer.redraw();
-}
-
-function onEditLayerChange(){
-  const layer = document.getElementById('ep-layer').value;
-  document.getElementById('ep-status-row').style.display = layer==='new' ? 'none' : '';
-}
-window.onEditLayerChange=onEditLayerChange;
-
-function applyEdit(){
-  const seg=segments.find(s=>s.id===selectedId); if(!seg) return;
-  pushHistory();
-  seg.layer  = document.getElementById('ep-layer').value;
-  seg.dia    = document.getElementById('ep-dia').value;
-  seg.status = seg.layer==='new' ? 'required' : document.getElementById('ep-status').value;
-  pushToFirebase(); updateSummary(); renderSegList(); pipeLayer.redraw();
-}
-
-function pushHistory(){ history.push(JSON.parse(JSON.stringify(segments))); if(history.length>40) history.shift(); }
-
-function undo(){
-  if(!history.length) return;
-  segments=history.pop(); selectedId=null; currentPts=[];
-  drawMarkers.forEach(m=>m.remove()); drawMarkers=[];
-  pushToFirebase(); updateSummary(); renderSegList(); pipeLayer.redraw();
-}
-
-function clearAll(){
-  if(!segments.length&&!currentPts.length) return;
-  if(!confirm('Clear all segments for this project?')) return;
-  pushHistory(); segments=[]; selectedId=null; currentPts=[];
-  drawMarkers.forEach(m=>m.remove()); drawMarkers=[];
-  pushToFirebase(); updateSummary(); renderSegList(); pipeLayer.redraw();
-}
-
-// ── Firebase sync ──────────────────────────────────────
-function setSyncStatus(s){
-  const el=document.getElementById('sync-status');
-  el.className='';
-  if(s==='synced'){ el.className='synced'; el.textContent='&#9679; synced'; }
-  else if(s==='syncing'){ el.className='syncing'; el.textContent='&#9679; syncing...'; }
-  else { el.className='offline'; el.textContent='&#9679; offline'; }
-}
-
-function dbRef(){ return ref(db, 'projects/'+projectId+'/segments'); }
-
-function pushToFirebase(){
-  setSyncStatus('syncing');
-  ignoreNext=true;
-  set(dbRef(), segments.length?segments:null)
-    .then(()=>{ setSyncStatus('synced'); document.getElementById('save-status').textContent='Saved '+new Date().toLocaleTimeString(); })
-    .catch(()=>{ setSyncStatus('offline'); });
-}
-
-function subscribeToProject(){
-  if(fbUnsub){ fbUnsub(); fbUnsub=null; }
-  setSyncStatus('syncing');
-  fbUnsub = onValue(dbRef(), snap=>{
-    if(ignoreNext){ ignoreNext=false; return; }
-    const data=snap.val();
-    segments = data ? (Array.isArray(data)?data:Object.values(data)) : [];
-    segCounter = segments.length ? Math.max(...segments.map((_,i)=>i+1))+1 : 1;
-    selectedId=null;
-    setSyncStatus('synced');
-    document.getElementById('save-status').textContent='Live — '+new Date().toLocaleTimeString();
-    updateSummary(); renderSegList(); pipeLayer.redraw();
-  }, err=>{ setSyncStatus('offline'); });
-}
-
-function switchProject(){
-  const val = document.getElementById('project-id').value.trim().replace(/[^a-zA-Z0-9_-]/g,'_');
-  if(!val){ alert('Enter a valid project name.'); return; }
-  projectId=val;
-  segments=[]; selectedId=null; history=[];
-  updateSummary(); renderSegList(); pipeLayer.redraw();
-  subscribeToProject();
-}
-
-// ── Status options sync ────────────────────────────────
-function syncStatusOptions(){
-  const layer = document.getElementById('sel-layer').value;
-  document.getElementById('tg-status').style.display = layer==='new' ? 'none' : '';
-}
-window.syncStatusOptions=syncStatusOptions;
-
-// ── Layer toggle ───────────────────────────────────────
 function toggleLayer(l){
   layerVisible[l]=!layerVisible[l];
   const btn=document.getElementById('lt-'+l);
   btn.classList.toggle('on-'+l,layerVisible[l]);
   btn.style.opacity=layerVisible[l]?'1':'0.4';
-  pipeLayer.redraw();
+  if(l==='elev') renderElevMarkers(); else pipeLayer.redraw();
 }
 window.toggleLayer=toggleLayer;
 
-// ── Lengths (haversine) ────────────────────────────────
+// ── Proximity detection ────────────────────────────────
+// Returns metres from a latlng to the nearest existing-layer segment point
+function distToExistingM(lat,lng){
+  let minD=Infinity;
+  segments.filter(s=>s.layer==='existing').forEach(seg=>{
+    if(!seg.latlngs) return;
+    seg.latlngs.forEach(ll=>{ minD=Math.min(minD,haversineM([lat,lng],ll)); });
+  });
+  return minD;
+}
+
+function classifyNewSeg(seg){
+  const thresh=parseFloat(document.getElementById('sel-prox-thresh').value);
+  if(!segments.some(s=>s.layer==='existing')) return 'required'; // no existing mapped yet
+  const dists=seg.latlngs.map(ll=>distToExistingM(ll[0],ll[1]));
+  const minD=Math.min(...dists);
+  const maxD=Math.max(...dists);
+  if(maxD<=thresh) return 'update';        // all points close → update
+  if(minD>thresh*3) return 'required';     // all points far → new pipe
+  return 'undecided';                      // mixed → needs review
+}
+
+// ── Segment operations ─────────────────────────────────
+function finishSegment(){
+  if(currentPts.length<2){currentPts=[];drawMarkers.forEach(m=>m.remove());drawMarkers=[];return;}
+  pushHistory();
+  const layer=document.getElementById('sel-layer').value;
+  let status;
+  if(layer==='existing'){
+    status=document.getElementById('sel-status').value;
+  } else {
+    status=classifyNewSeg({latlngs:currentPts});
+  }
+  const seg={
+    id:Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    latlngs:[...currentPts],
+    dia:document.getElementById('sel-dia').value,
+    layer, status,
+    label:'Seg '+segCounter++
+  };
+  segments.push(seg);
+  selectedId=seg.id;
+  currentPts=[];drawMarkers.forEach(m=>m.remove());drawMarkers=[];
+
+  if(status==='undecided'){
+    pendingProxId=seg.id;
+    showProxBanner(seg);
+    switchTab('summary');
+  }
+
+  pushToFirebase();
+  updateSummary();renderSegList();pipeLayer.redraw();
+}
+
+function showProxBanner(seg){
+  const thresh=parseFloat(document.getElementById('sel-prox-thresh').value);
+  document.getElementById('prox-banner-msg').textContent=
+    `Segment "${seg.label}" has points both near and far from existing pipes (threshold: ${thresh}m). Is this an update to an existing run, or an entirely new pipe?`;
+  document.getElementById('prox-banner').classList.add('visible');
+}
+
+function confirmProx(type){
+  if(!pendingProxId) return;
+  const seg=segments.find(s=>s.id===pendingProxId);
+  if(seg) seg.status=type;
+  pendingProxId=null;
+  document.getElementById('prox-banner').classList.remove('visible');
+  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();
+}
+window.confirmProx=confirmProx;
+
+function deleteSeg(idx,e){
+  e.stopPropagation();pushHistory();
+  if(selectedId===segments[idx].id) selectedId=null;
+  segments.splice(idx,1);
+  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();
+}
+function deleteSelected(){
+  const idx=segments.findIndex(s=>s.id===selectedId);if(idx===-1)return;
+  pushHistory();segments.splice(idx,1);selectedId=null;
+  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();
+}
+function applyEdit(){
+  const seg=segments.find(s=>s.id===selectedId);if(!seg)return;
+  pushHistory();
+  seg.layer=document.getElementById('ep-layer').value;
+  seg.dia  =document.getElementById('ep-dia').value;
+  seg.status=seg.layer==='existing'
+    ? document.getElementById('ep-status').value
+    : document.getElementById('ep-newtype').value;
+  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();
+}
+function onEditLayerChange(){
+  const layer=document.getElementById('ep-layer').value;
+  document.getElementById('ep-status-row').style.display  =layer==='existing'?'':'none';
+  document.getElementById('ep-newtype-row').style.display =layer==='new'?'':'none';
+}
+window.onEditLayerChange=onEditLayerChange;
+
+function pushHistory(){history.push(JSON.parse(JSON.stringify({segments,elevPoints})));if(history.length>40)history.shift();}
+function undo(){
+  if(!history.length)return;
+  const s=history.pop();segments=s.segments;elevPoints=s.elevPoints;
+  selectedId=null;currentPts=[];drawMarkers.forEach(m=>m.remove());drawMarkers=[];
+  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();renderElevMarkers();
+}
+function clearAll(){
+  if(!segments.length&&!currentPts.length&&!elevPoints.length)return;
+  if(!confirm('Clear all segments and elevation points for this project?'))return;
+  pushHistory();segments=[];elevPoints=[];selectedId=null;currentPts=[];
+  drawMarkers.forEach(m=>m.remove());drawMarkers=[];
+  document.getElementById('prox-banner').classList.remove('visible');
+  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();renderElevMarkers();
+}
+window.undo=undo; window.clearAll=clearAll;
+window.applyEdit=applyEdit; window.deleteSelected=deleteSelected;
+window._deleteSeg=deleteSeg;
+
+// ── Firebase ───────────────────────────────────────────
+function setSyncStatus(s){
+  const el=document.getElementById('sync-status');
+  if(s==='synced'){el.className='synced';el.textContent='&#9679; synced';}
+  else if(s==='syncing'){el.className='syncing';el.textContent='&#9679; syncing...';}
+  else{el.className='offline';el.textContent='&#9679; offline';}
+}
+function dbRef(){return ref(db,'projects/'+projectId+'/data');}
+function pushToFirebase(){
+  setSyncStatus('syncing');
+  ignoreNext=true;
+  set(dbRef(),{segments:segments.length?segments:null, elevPoints:elevPoints.length?elevPoints:null})
+    .then(()=>{setSyncStatus('synced');document.getElementById('save-status').textContent='Saved '+new Date().toLocaleTimeString();})
+    .catch(()=>setSyncStatus('offline'));
+}
+function subscribeToProject(){
+  if(fbUnsub){fbUnsub();fbUnsub=null;}
+  setSyncStatus('syncing');
+  fbUnsub=onValue(dbRef(),snap=>{
+    if(ignoreNext){ignoreNext=false;return;}
+    const d=snap.val();
+    segments   = d?.segments   ? (Array.isArray(d.segments)  ?d.segments  :Object.values(d.segments))  : [];
+    elevPoints = d?.elevPoints ? (Array.isArray(d.elevPoints)?d.elevPoints:Object.values(d.elevPoints)) : [];
+    segCounter=segments.length?segments.length+1:1;
+    elevCounter=elevPoints.length?elevPoints.length+1:1;
+    selectedId=null;
+    setSyncStatus('synced');
+    document.getElementById('save-status').textContent='Live — '+new Date().toLocaleTimeString();
+    updateSummary();renderSegList();pipeLayer.redraw();renderElevMarkers();
+  },()=>setSyncStatus('offline'));
+}
+function switchProject(){
+  const val=document.getElementById('project-id').value.trim().replace(/[^a-zA-Z0-9_-]/g,'_');
+  if(!val){alert('Enter a valid project name.');return;}
+  projectId=val;segments=[];elevPoints=[];selectedId=null;history=[];
+  updateSummary();renderSegList();pipeLayer.redraw();renderElevMarkers();
+  subscribeToProject();
+}
+window.switchProject=switchProject;
+
+// ── Haversine ──────────────────────────────────────────
 function haversineM(a,b){
-  const R=6371000, dLat=(b[0]-a[0])*Math.PI/180, dLon=(b[1]-a[1])*Math.PI/180;
+  const R=6371000,dLat=(b[0]-a[0])*Math.PI/180,dLon=(b[1]-a[1])*Math.PI/180;
   const x=Math.sin(dLat/2)**2+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 function segLenM(seg){
-  if(!seg.latlngs||seg.latlngs.length<2) return 0;
-  let t=0; for(let i=0;i<seg.latlngs.length-1;i++) t+=haversineM(seg.latlngs[i],seg.latlngs[i+1]);
+  if(!seg.latlngs||seg.latlngs.length<2)return 0;
+  let t=0;for(let i=0;i<seg.latlngs.length-1;i++)t+=haversineM(seg.latlngs[i],seg.latlngs[i+1]);
   return t;
 }
 
 // ── Summary ────────────────────────────────────────────
 function updateSummary(){
-  const sizes=['5','4','3'], D={};
-  sizes.forEach(s=>{ D[s]={stock:0,required:0}; });
+  const sizes=['5','4','3','2','20mm'],D={};
+  sizes.forEach(s=>{D[s]={stock:0,required:0,update:0};});
   segments.forEach(seg=>{
     const l=segLenM(seg);
-    if(seg.layer==='existing' && seg.status==='good')     D[seg.dia].stock    += l;
-    if(seg.layer==='new'      && seg.status==='required') D[seg.dia].required += l;
+    if(seg.layer==='existing'&&seg.status==='good')     D[seg.dia].stock    +=l;
+    if(seg.layer==='new'&&seg.status==='required')      D[seg.dia].required +=l;
+    if(seg.layer==='new'&&seg.status==='update')        D[seg.dia].update   +=l;
   });
   const tbody=document.getElementById('sum-body');
   tbody.innerHTML='';
-  let tS=0,tR=0,tB=0;
+  let tS=0,tRq=0,tUp=0,tB=0;
   sizes.forEach(s=>{
-    const d=D[s], buy=Math.max(0,d.required-d.stock);
-    tS+=d.stock; tR+=d.required; tB+=buy;
+    const d=D[s];
+    if(d.stock===0&&d.required===0&&d.update===0)return;
+    const buy=Math.max(0,d.required-d.stock);
+    tS+=d.stock;tRq+=d.required;tUp+=d.update;tB+=buy;
     const tr=document.createElement('tr');
     tr.innerHTML=
-      `<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PIPE_COLOR[s]};margin-right:4px;vertical-align:middle"></span>${s}"</td>`+
-      `<td>${d.stock.toFixed(0)}</td>`+
-      `<td>${d.required.toFixed(0)}</td>`+
+      `<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PIPE_COLOR[s]};margin-right:4px;vertical-align:middle"></span>${s}</td>`+
+      `<td>${d.stock.toFixed(0)}</td><td>${d.required.toFixed(0)}</td><td>${d.update.toFixed(0)}</td>`+
       `<td class="${buy>0?'c-buy':'c-ok'}">${buy.toFixed(0)}</td>`;
     tbody.appendChild(tr);
   });
-  document.getElementById('ft-stock').textContent    = tS.toFixed(0);
-  document.getElementById('ft-required').textContent = tR.toFixed(0);
+  document.getElementById('ft-stock').textContent=tS.toFixed(0);
+  document.getElementById('ft-req').textContent  =tRq.toFixed(0);
+  document.getElementById('ft-upd').textContent  =tUp.toFixed(0);
   const ftB=document.getElementById('ft-buy');
-  ftB.textContent=tB.toFixed(0)+' m'; ftB.className=tB>0?'c-buy':'c-ok';
+  ftB.textContent=tB.toFixed(0)+' m';ftB.className=tB>0?'c-buy':'c-ok';
 
-  const rb=document.getElementById('reuse-balance'); rb.innerHTML='';
+  // Stock balance
+  const rb=document.getElementById('reuse-balance');rb.innerHTML='';
   sizes.forEach(s=>{
-    const d=D[s]; if(d.stock===0&&d.required===0) return;
-    const surplus=d.stock-d.required, sf=Math.max(0,-surplus);
+    const d=D[s];if(d.stock===0&&d.required===0)return;
+    const surplus=d.stock-d.required,sf=Math.max(0,-surplus);
     let badge='',cls='';
-    if(sf>0){ badge='buy '+sf.toFixed(0)+'m'; cls='rb-warn'; }
-    else if(surplus>0.5){ badge='surplus '+surplus.toFixed(0)+'m'; cls='rb-surplus'; }
-    else { badge='exact'; cls='rb-ok'; }
-    const row=document.createElement('div'); row.className='rb-row';
+    if(sf>0){badge='buy '+sf.toFixed(0)+'m';cls='rb-warn';}
+    else if(surplus>0.5){badge='surplus '+surplus.toFixed(0)+'m';cls='rb-surplus';}
+    else{badge='exact';cls='rb-ok';}
+    const row=document.createElement('div');row.className='rb-row';
     row.innerHTML=
-      `<div class="rb-size"><div class="rb-dot" style="background:${PIPE_COLOR[s]}"></div>${s}"</div>`+
+      `<div class="rb-size"><div class="rb-dot" style="background:${PIPE_COLOR[s]}"></div>${s}</div>`+
       `<div class="rb-nums"><span>stock ${d.stock.toFixed(0)}m</span><span>need ${d.required.toFixed(0)}m</span></div>`+
       `<span class="rb-status ${cls}">${badge}</span>`;
     rb.appendChild(row);
   });
   if(!rb.children.length) rb.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Map both layers to see balance.</div>';
+
+  // Undecided count warning
+  const nUndecided=segments.filter(s=>s.status==='undecided').length;
+  if(nUndecided>0&&!pendingProxId){
+    document.getElementById('prox-banner-msg').textContent=`${nUndecided} segment(s) need review — click them in Segments tab.`;
+    document.getElementById('prox-banner').classList.add('visible');
+  } else if(!pendingProxId){
+    document.getElementById('prox-banner').classList.remove('visible');
+  }
+}
+
+function updateElevSummary(){
+  const el=document.getElementById('elev-list-sum');
+  if(!elevPoints.length){el.textContent='No elevation points yet.';return;}
+  el.innerHTML=elevPoints.map(ep=>
+    `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+      <span style="color:var(--text2)">${ep.label}</span>
+      <span style="color:${ep.elev!==null?'var(--accent)':'var(--text3)'}">${ep.elev!==null?ep.elev+' m asl':'pending'}</span>
+    </div>`
+  ).join('');
 }
 
 // ── Segment list ───────────────────────────────────────
 function renderSegList(){
   const el=document.getElementById('seg-list');
   if(!segments.length){
-    el.innerHTML='<div id="seg-empty">No segments yet.<br>Switch to Draw pipe and click the map.</div>';
-    document.getElementById('edit-panel').classList.remove('visible'); return;
+    el.innerHTML='<div id="seg-empty">No segments yet.<br>Draw pipe to begin.</div>';
+    document.getElementById('edit-panel').classList.remove('visible');return;
   }
   el.innerHTML='';
   segments.forEach((seg,i)=>{
     const l=segLenM(seg);
+    const needsReview=seg.status==='undecided';
     const div=document.createElement('div');
-    div.className='seg-item'+(seg.id===selectedId?' sel':'');
+    div.className='seg-item'+(seg.id===selectedId?' sel':'')+(needsReview?' needs-review':'');
     div.innerHTML=
       `<div class="seg-dot" style="background:${PIPE_COLOR[seg.dia]}"></div>`+
       `<div class="seg-body">`+
-        `<div class="seg-title">${seg.dia}" &nbsp;<span class="seg-badge sb-${seg.status}">${seg.status}</span> <span style="font-size:9px;color:var(--text3)">${seg.layer}</span></div>`+
+        `<div class="seg-title">${seg.dia} &nbsp;<span class="seg-badge sb-${seg.status}">${seg.status}</span> <span style="font-size:9px;color:var(--text3)">${seg.layer}</span>${needsReview?' &#9888;':''}</div>`+
         `<div class="seg-meta">${l.toFixed(0)} m</div>`+
       `</div>`+
       `<span class="seg-del" onclick="window._deleteSeg(${i},event)">&#215;</span>`;
-    div.onclick=()=>{ selectedId=seg.id; renderSegList(); pipeLayer.redraw(); };
+    div.onclick=()=>{selectedId=seg.id;renderSegList();pipeLayer.redraw();};
     el.appendChild(div);
   });
   const sel=segments.find(s=>s.id===selectedId);
   const ep=document.getElementById('edit-panel');
   if(sel){
     ep.classList.add('visible');
-    document.getElementById('ep-layer').value  = sel.layer;
-    document.getElementById('ep-dia').value    = sel.dia;
-    document.getElementById('ep-status-row').style.display = sel.layer==='new' ? 'none' : '';
-    if(sel.layer==='existing') document.getElementById('ep-status').value = sel.status;
+    document.getElementById('ep-layer').value=sel.layer;
+    document.getElementById('ep-dia').value  =sel.dia;
+    const isNew=sel.layer==='new';
+    document.getElementById('ep-status-row').style.display =isNew?'none':'';
+    document.getElementById('ep-newtype-row').style.display=isNew?'':'none';
+    if(!isNew) document.getElementById('ep-status').value =sel.status;
+    else       document.getElementById('ep-newtype').value=sel.status;
   } else ep.classList.remove('visible');
 }
 
-// expose to onclick attrs
-window._deleteSeg=deleteSeg;
-
-// ── Tab ────────────────────────────────────────────────
 function switchTab(t){
   ['summary','segments'].forEach(id=>{
     document.getElementById('tab-'+id).classList.toggle('visible',id===t);
@@ -696,34 +851,30 @@ window.switchTab=switchTab;
 
 // ── Export CSV ─────────────────────────────────────────
 function exportCSV(){
-  if(!segments.length){ alert('No segments to export.'); return; }
-  const rows=['Segment,Layer,Diameter (inch),Status,Length (m)'];
-  segments.forEach((seg,i)=>{ rows.push([`Seg ${i+1}`,seg.layer,seg.dia,seg.status,segLenM(seg).toFixed(2)].join(',')); });
-  rows.push('','Procurement summary','Size,Stock (m),Reuse needed (m),New runs (m),Buy (m)');
-  ['5','4','3'].forEach(s=>{
-    const stock  =segments.filter(g=>g.layer==='existing'&&g.dia===s&&g.status==='good' ).reduce((a,g)=>a+segLenM(g),0);
-    const reuse  =segments.filter(g=>g.layer==='new'     &&g.dia===s&&g.status==='reuse').reduce((a,g)=>a+segLenM(g),0);
-    const newrun =segments.filter(g=>g.layer==='new'     &&g.dia===s&&g.status==='new'  ).reduce((a,g)=>a+segLenM(g),0);
-    const buy=newrun+Math.max(0,reuse-stock);
-    rows.push([s+'"',stock.toFixed(2),reuse.toFixed(2),newrun.toFixed(2),buy.toFixed(2)].join(','));
+  if(!segments.length&&!elevPoints.length){alert('Nothing to export.');return;}
+  const rows=['Segment,Layer,Diameter,Status,Length (m)'];
+  segments.forEach((seg,i)=>rows.push([`Seg ${i+1}`,seg.layer,seg.dia,seg.status,segLenM(seg).toFixed(2)].join(',')));
+  rows.push('','Procurement','Size,Stock (m),Required (m),Update (m),Buy (m)');
+  ['5','4','3','2','20mm'].forEach(s=>{
+    const stock =segments.filter(g=>g.layer==='existing'&&g.dia===s&&g.status==='good'    ).reduce((a,g)=>a+segLenM(g),0);
+    const req   =segments.filter(g=>g.layer==='new'     &&g.dia===s&&g.status==='required').reduce((a,g)=>a+segLenM(g),0);
+    const upd   =segments.filter(g=>g.layer==='new'     &&g.dia===s&&g.status==='update'  ).reduce((a,g)=>a+segLenM(g),0);
+    if(stock===0&&req===0&&upd===0)return;
+    rows.push([s,stock.toFixed(2),req.toFixed(2),upd.toFixed(2),Math.max(0,req-stock).toFixed(2)].join(','));
   });
+  if(elevPoints.length){
+    rows.push('','Elevation points','Label,Lat,Lng,Elevation (m asl)');
+    elevPoints.forEach(ep=>rows.push([ep.label,ep.lat.toFixed(6),ep.lng.toFixed(6),ep.elev!==null?ep.elev:'unknown'].join(',')));
+  }
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
-  a.download='pipemap_export.csv'; a.click();
+  a.download='pipemap_export.csv';a.click();
 }
 window.exportCSV=exportCSV;
 
-// ── Wire up remaining window-scoped functions ──────────
-window.setMode=setMode;
-window.undo=undo;
-window.clearAll=clearAll;
-window.applyEdit=applyEdit;
-window.deleteSelected=deleteSelected;
-window.switchProject=switchProject;
-
 // ── Init ───────────────────────────────────────────────
 setMode('select');
-syncStatusOptions();
+onLayerChange();
 renderSegList();
 updateSummary();
 subscribeToProject();
