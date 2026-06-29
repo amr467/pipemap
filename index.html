@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PipeMap</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231a2e1a'/><path d='M6 16h6v4h8v-4h6' stroke='%234ade80' stroke-width='3' fill='none' stroke-linecap='round'/></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0f1a0f;
+    --surface:   #1a2e1a;
+    --surface2:  #223322;
+    --border:    #2d4a2d;
+    --border2:   #3d6040;
+    --text:      #e8f5e8;
+    --text2:     #8faa8f;
+    --text3:     #5a7a5a;
+    --accent:    #4ade80;
+    --accent-bg: #1a3d2a;
+    --pipe5:     #f97316;
+    --pipe4:     #4ade80;
+    --pipe3:     #60a5fa;
+    --gold:      #fbbf24;
+    --danger:    #f87171;
+    --danger-bg: #3d1a1a;
+    --radius:    6px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); }
+
+  /* ── App shell ── */
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ── Header ── */
+  #header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; height: 44px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-shrink: 0; user-select: none;
+  }
+  #logo { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; color: var(--accent); }
+  #logo svg { flex-shrink: 0; }
+  #header-divider { width: 1px; height: 20px; background: var(--border); }
+  #save-status { font-size: 11px; color: var(--text3); margin-left: auto; }
+  #btn-clear-all { margin-left: 8px; }
+
+  /* ── Toolbar ── */
+  #toolbar {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    padding: 6px 12px; background: var(--surface2);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .tg { display: flex; align-items: center; gap: 4px; padding-right: 10px; margin-right: 2px; border-right: 1px solid var(--border); }
+  .tg:last-child { border-right: none; }
+  .tg label { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+  button, select, input[type=number], input[type=text] {
+    font-family: inherit; font-size: 12px;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border2); border-radius: var(--radius);
+    padding: 0 10px; height: 30px; cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    white-space: nowrap;
+  }
+  button:hover { background: var(--surface2); border-color: var(--accent); }
+  button.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+  button.danger { border-color: #7f3030; color: var(--danger); }
+  button.danger:hover { background: var(--danger-bg); border-color: var(--danger); }
+  select { padding-right: 6px; }
+  input[type=number] { width: 72px; }
+
+  /* pipe diameter color chips in select via JS — we do it with custom labels */
+  .dia-label { display: inline-flex; align-items: center; gap: 5px; }
+  .dia-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Main area ── */
+  #main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+  /* ── Canvas ── */
+  #canvas-wrap { flex: 1; position: relative; overflow: hidden; min-width: 0; }
+  canvas { display: block; position: absolute; top: 0; left: 0; }
+
+  #no-image {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    pointer-events: none;
+  }
+  #no-image.hidden { display: none; }
+  #no-image-icon { font-size: 64px; color: var(--border2); }
+  #no-image p { font-size: 14px; color: var(--text2); }
+  #no-image button { pointer-events: all; font-size: 13px; height: 36px; padding: 0 18px; border-color: var(--accent); color: var(--accent); }
+  #no-image button:hover { background: var(--accent-bg); }
+
+  /* Scale overlay */
+  #scale-panel {
+    position: absolute; top: 12px; left: 12px; z-index: 20;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 12px 14px; width: 230px;
+    display: none;
+  }
+  #scale-panel.visible { display: block; }
+  #scale-panel h3 { font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+  #scale-panel p { font-size: 11px; color: var(--text2); margin-bottom: 8px; line-height: 1.5; }
+  #scale-panel .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  #scale-panel .row label { font-size: 11px; color: var(--text3); }
+  #scale-status { font-size: 11px; color: var(--accent); min-height: 16px; }
+
+  /* Tip bar */
+  #tipbar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: #0008; backdrop-filter: blur(4px);
+    padding: 4px 12px; font-size: 11px; color: var(--text2);
+    pointer-events: none;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 260px; flex-shrink: 0;
+    background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  #sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .stab {
+    flex: 1; height: 36px; border: none; border-radius: 0;
+    background: transparent; color: var(--text2); font-size: 12px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .stab:hover { color: var(--text); background: transparent; border-color: transparent; }
+  .stab.active { color: var(--accent); border-bottom-color: var(--accent); background: transparent; }
+
+  #tab-summary, #tab-segments { display: none; flex: 1; overflow-y: auto; flex-direction: column; }
+  #tab-summary.visible, #tab-segments.visible { display: flex; }
+
+  /* Summary tab */
+  #sum-wrap { padding: 12px; }
+  .sum-block { margin-bottom: 16px; }
+  .sum-block-title { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  #scale-info-text { font-size: 11px; color: var(--text2); margin-bottom: 10px; padding: 6px 8px; background: var(--surface2); border-radius: var(--radius); border-left: 2px solid var(--accent); }
+
+  table.sum-t { width: 100%; border-collapse: collapse; font-size: 11px; }
+  table.sum-t th { color: var(--text3); font-weight: 400; text-align: right; padding: 3px 4px; font-size: 10px; }
+  table.sum-t th:first-child { text-align: left; }
+  table.sum-t td { color: var(--text); padding: 4px 4px; text-align: right; font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--border); }
+  table.sum-t td:first-child { text-align: left; }
+  table.sum-t tfoot td { border-bottom: none; border-top: 1px solid var(--border2); font-weight: 600; padding-top: 6px; }
+  .net-buy { color: var(--danger); }
+  .net-ok { color: var(--accent); }
+
+  .legend { display: flex; flex-direction: column; gap: 6px; }
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text2); }
+  .legend-line { width: 28px; height: 3px; flex-shrink: 0; }
+  .legend-line.dash2 { background: repeating-linear-gradient(to right, var(--text2) 0 6px, transparent 6px 12px); }
+  .legend-line.dash3 { background: repeating-linear-gradient(to right, var(--text2) 0 4px, transparent 4px 8px); }
+  .legend-line.solid { background: var(--text2); }
+
+  .export-row { padding: 12px; border-top: 1px solid var(--border); margin-top: auto; display: flex; gap: 6px; }
+  .export-row button { flex: 1; font-size: 11px; }
+
+  /* Segments tab */
+  #seg-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .seg-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 9px; border-radius: var(--radius);
+    border: 1px solid var(--border); margin-bottom: 4px;
+    font-size: 11px; cursor: pointer; background: var(--surface2);
+    transition: border-color 0.1s;
+  }
+  .seg-item:hover { border-color: var(--border2); }
+  .seg-item.sel { border-color: var(--accent); background: var(--accent-bg); }
+  .seg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .seg-body { flex: 1; min-width: 0; }
+  .seg-title { font-weight: 500; color: var(--text); margin-bottom: 1px; }
+  .seg-meta { color: var(--text2); }
+  .seg-badge { font-size: 10px; padding: 1px 6px; border-radius: 10px; }
+  .sb-existing { background: #1a3d2a; color: #4ade80; }
+  .sb-replace  { background: #3d1a1a; color: #f87171; }
+  .sb-new      { background: #1a2a3d; color: #60a5fa; }
+  .seg-del { color: var(--text3); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; flex-shrink: 0; }
+  .seg-del:hover { color: var(--danger); }
+
+  #seg-empty { padding: 16px 12px; font-size: 12px; color: var(--text3); text-align: center; line-height: 1.6; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  @media (max-width: 700px) {
+    #sidebar { width: 200px; }
+    #toolbar { gap: 2px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div id="header">
+    <div id="logo">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="22" height="22" rx="5" fill="#1a3d2a"/>
+        <path d="M3 11h4v3h8v-3h4" stroke="#4ade80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="7" cy="11" r="1.5" fill="#4ade80"/>
+        <circle cx="15" cy="11" r="1.5" fill="#4ade80"/>
+      </svg>
+      PipeMap
+    </div>
+    <div id="header-divider"></div>
+    <span id="save-status">No data saved yet</span>
+    <button id="btn-clear-all" class="danger" onclick="clearAll()">Clear all</button>
+  </div>
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <div class="tg">
+      <label>Map</label>
+      <button onclick="document.getElementById('imgInput').click()">&#8593; Load image</button>
+      <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="loadImage(event)">
+    </div>
+    <div class="tg">
+      <label>Mode</label>
+      <button id="btn-scale"  onclick="setMode('scale')"  title="Draw a reference line of known length">&#9632; Scale</button>
+      <button id="btn-draw"   onclick="setMode('draw')"   title="Click to trace a pipe, double-click to finish">&#9998; Draw pipe</button>
+      <button id="btn-select" onclick="setMode('select')" title="Click a segment to select it">&#8592; Select</button>
+    </div>
+    <div class="tg">
+      <label>Diameter</label>
+      <select id="sel-dia">
+        <option value="5">&#9679; 5 inch (main)</option>
+        <option value="4">&#9679; 4 inch (secondary)</option>
+        <option value="3">&#9679; 3 inch (lateral)</option>
+      </select>
+    </div>
+    <div class="tg">
+      <label>Status</label>
+      <select id="sel-status">
+        <option value="existing">Existing — keep</option>
+        <option value="replace">Existing — replace</option>
+        <option value="new">New — purchase</option>
+      </select>
+    </div>
+    <div class="tg">
+      <button onclick="undo()" title="Undo last action">&#8617; Undo</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+
+    <!-- Canvas area -->
+    <div id="canvas-wrap">
+      <canvas id="c"></canvas>
+
+      <div id="no-image">
+        <div id="no-image-icon">&#9906;</div>
+        <p>Load a satellite image to begin mapping pipes</p>
+        <button onclick="document.getElementById('imgInput').click()">&#8593; Load map image</button>
+      </div>
+
+      <!-- Scale panel -->
+      <div id="scale-panel">
+        <h3>Set map scale</h3>
+        <p>Draw a line over something you know the real length of — a field edge, road, or fence line.</p>
+        <div class="row">
+          <label>Real length:</label>
+          <input type="number" id="scale-val" placeholder="e.g. 200" min="0.1" step="0.1" style="width:80px">
+          <select id="scale-unit" style="width:58px">
+            <option value="1">m</option>
+            <option value="1000">km</option>
+          </select>
+        </div>
+        <div class="row">
+          <button onclick="confirmScale()">&#10003; Confirm scale</button>
+          <button onclick="clearScaleLine()" class="danger">Reset</button>
+        </div>
+        <div id="scale-status"></div>
+      </div>
+
+      <!-- Tip bar -->
+      <div id="tipbar" id="tipbar">Scroll to zoom &nbsp;·&nbsp; Alt+drag to pan &nbsp;·&nbsp; Double-click to finish a segment</div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <div id="sidebar-tabs">
+        <button class="stab active" id="tab-btn-summary"  onclick="switchTab('summary')">Summary</button>
+        <button class="stab"        id="tab-btn-segments" onclick="switchTab('segments')">Segments</button>
+      </div>
+
+      <!-- Summary tab -->
+      <div id="tab-summary" class="visible">
+        <div id="sum-wrap">
+          <div class="sum-block">
+            <div class="sum-block-title">Scale</div>
+            <div id="scale-info-text">Not set — use Scale mode to calibrate</div>
+          </div>
+
+          <div class="sum-block">
+            <div class="sum-block-title">Pipe lengths</div>
+            <table class="sum-t">
+              <thead>
+                <tr>
+                  <th>Size</th>
+                  <th>Keep</th>
+                  <th>Replace</th>
+                  <th>New</th>
+                  <th>Buy</th>
+                </tr>
+              </thead>
+              <tbody id="sum-body"></tbody>
+              <tfoot>
+                <tr>
+                  <td>Total</td>
+                  <td id="ft-keep">—</td>
+                  <td id="ft-rep">—</td>
+                  <td id="ft-new">—</td>
+                  <td id="ft-buy" class="net-buy">—</td>
+                </tr>
+              </tfoot>
+            </table>
+            <p style="font-size:10px;color:var(--text3);margin-top:6px;">Buy = Replace + New (pipes to procure)</p>
+          </div>
+
+          <div class="sum-block">
+            <div class="sum-block-title">Legend</div>
+            <div class="legend">
+              <div class="legend-row"><div class="legend-line solid" style="background:var(--pipe5)"></div> 5" main — solid line</div>
+              <div class="legend-row"><div class="legend-line solid" style="background:var(--pipe4)"></div> 4" secondary — solid line</div>
+              <div class="legend-row"><div class="legend-line solid" style="background:var(--pipe3)"></div> 3" lateral — solid line</div>
+              <div class="legend-row"><div class="legend-line solid" style="background:#666; opacity:.6;"></div> Thicker = larger pipe</div>
+              <div style="margin-top:4px; font-size:10px; color:var(--text3);">Dash pattern = status: solid → keep, long dash → replace, short dash → new</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="export-row">
+          <button onclick="exportCSV()">&#8595; CSV</button>
+          <button onclick="saveToStorage()">&#9632; Save</button>
+          <button onclick="loadFromStorage()">&#8593; Load</button>
+        </div>
+      </div>
+
+      <!-- Segments tab -->
+      <div id="tab-segments">
+        <div id="seg-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const wrap   = document.getElementById('canvas-wrap');
+
+// ── State ──────────────────────────────────────────────
+let img         = null;
+let mode        = 'select';
+let segments    = [];
+let currentPts  = [];
+let scalePixPerM = null;
+let scaleLine   = null;
+let selectedId  = null;
+let pan         = { x: 0, y: 0 };
+let zoom        = 1;
+let isPanning   = false;
+let panStart    = null;
+let panOrigin   = null;
+let history     = [];
+let mouseScreen = { x: 0, y: 0 };
+
+const PIPE_COLOR  = { '5': '#f97316', '4': '#4ade80', '3': '#60a5fa' };
+const PIPE_WIDTH  = { '5': 4, '4': 2.8, '3': 1.8 };
+const STATUS_DASH = { existing: [], replace: [10, 6], new: [4, 5] };
+
+// ── Coordinate helpers ─────────────────────────────────
+const w2s = (wx, wy) => ({ x: wx * zoom + pan.x, y: wy * zoom + pan.y });
+const s2w = (sx, sy) => ({ x: (sx - pan.x) / zoom, y: (sy - pan.y) / zoom });
+
+function mouseOn(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+// ── Canvas resize ──────────────────────────────────────
+function resize() {
+  const r = wrap.getBoundingClientRect();
+  canvas.width  = r.width;
+  canvas.height = r.height;
+  draw();
+}
+new ResizeObserver(resize).observe(wrap);
+
+// ── Image load ─────────────────────────────────────────
+function loadImage(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  const i   = new Image();
+  i.onload  = () => {
+    img = i;
+    const r  = wrap.getBoundingClientRect();
+    const sc = Math.min(r.width / i.width, r.height / i.height) * 0.97;
+    zoom = sc;
+    pan  = { x: (r.width  - i.width  * sc) / 2,
+             y: (r.height - i.height * sc) / 2 };
+    document.getElementById('no-image').classList.add('hidden');
+    draw();
+  };
+  i.src = url;
+}
+
+// ── Mode ───────────────────────────────────────────────
+function setMode(m) {
+  if (mode === 'draw' && currentPts.length > 1) finishSegment();
+  currentPts = [];
+  mode = m;
+  ['scale','draw','select'].forEach(id => {
+    document.getElementById('btn-'+id).classList.toggle('active', id === m);
+  });
+  const sp = document.getElementById('scale-panel');
+  sp.classList.toggle('visible', m === 'scale');
+  canvas.style.cursor = m === 'select' ? 'default' : 'crosshair';
+  draw();
+}
+
+// ── Mouse events ───────────────────────────────────────
+canvas.addEventListener('mousemove', e => {
+  const p = mouseOn(e);
+  mouseScreen = p;
+
+  if (isPanning) {
+    pan.x = panOrigin.x + (p.x - panStart.x);
+    pan.y = panOrigin.y + (p.y - panStart.y);
+    draw();
+    return;
+  }
+  draw();
+
+  // Ghost line while drawing
+  if (mode === 'draw' && currentPts.length > 0) {
+    const last = w2s(currentPts[currentPts.length-1].x, currentPts[currentPts.length-1].y);
+    ctx.save();
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = '#ffffff88';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Scale line ghost
+  if (mode === 'scale' && scaleLine && scaleLine.length === 1) {
+    const s = w2s(scaleLine[0].x, scaleLine[0].y);
+    ctx.save();
+    ctx.setLineDash([5,4]);
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    ctx.restore();
+    const px = Math.hypot(p.x - s.x, p.y - s.y);
+    document.getElementById('scale-status').textContent = `Line: ${Math.round(px)}px — enter real length above`;
+  }
+});
+
+canvas.addEventListener('mousedown', e => {
+  // Pan: middle button or alt+left
+  if (e.button === 1 || (e.button === 0 && e.altKey)) {
+    isPanning = true;
+    panStart  = mouseOn(e);
+    panOrigin = { ...pan };
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
+  if (e.button !== 0) return;
+
+  const p = mouseOn(e);
+  const w = s2w(p.x, p.y);
+
+  if (mode === 'scale') {
+    if (!scaleLine) scaleLine = [];
+    if (scaleLine.length < 2) scaleLine.push(w);
+    if (scaleLine.length === 2) document.getElementById('scale-status').textContent = 'Line set — enter real length and confirm.';
+    draw();
+
+  } else if (mode === 'draw') {
+    currentPts.push(w);
+    draw();
+
+  } else if (mode === 'select') {
+    const hit = hitTest(p);
+    selectedId = hit ? hit.id : null;
+    renderSegList();
+    draw();
+  }
+});
+
+canvas.addEventListener('dblclick', e => {
+  if (mode === 'draw' && currentPts.length > 1) finishSegment();
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (isPanning) {
+    isPanning = false;
+    canvas.style.cursor = mode === 'select' ? 'default' : 'crosshair';
+  }
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const p  = mouseOn(e);
+  const zf = e.deltaY < 0 ? 1.12 : 0.89;
+  pan.x = p.x - (p.x - pan.x) * zf;
+  pan.y = p.y - (p.y - pan.y) * zf;
+  zoom *= zf;
+  draw();
+}, { passive: false });
+
+// ── Hit test ───────────────────────────────────────────
+function hitTest(sp) {
+  for (let i = segments.length - 1; i >= 0; i--) {
+    const seg = segments[i];
+    for (let j = 0; j < seg.points.length - 1; j++) {
+      const a = w2s(seg.points[j].x,   seg.points[j].y);
+      const b = w2s(seg.points[j+1].x, seg.points[j+1].y);
+      if (distPtSeg(sp, a, b) < 9) return seg;
+    }
+  }
+  return null;
+}
+
+function distPtSeg(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  if (dx === 0 && dy === 0) return Math.hypot(p.x-a.x, p.y-a.y);
+  const t = Math.max(0, Math.min(1, ((p.x-a.x)*dx + (p.y-a.y)*dy) / (dx*dx+dy*dy)));
+  return Math.hypot(p.x - (a.x+t*dx), p.y - (a.y+t*dy));
+}
+
+// ── Segment management ─────────────────────────────────
+let segCounter = 1;
+
+function finishSegment() {
+  if (currentPts.length < 2) { currentPts = []; return; }
+  pushHistory();
+  const seg = {
+    id:     Date.now(),
+    label:  'Segment ' + segCounter++,
+    points: [...currentPts],
+    dia:    document.getElementById('sel-dia').value,
+    status: document.getElementById('sel-status').value,
+  };
+  segments.push(seg);
+  selectedId = seg.id;
+  currentPts = [];
+  updateSummary(); renderSegList(); draw();
+  autosave();
+}
+
+function deleteSeg(idx, e) {
+  e.stopPropagation();
+  pushHistory();
+  if (selectedId === segments[idx].id) selectedId = null;
+  segments.splice(idx, 1);
+  updateSummary(); renderSegList(); draw();
+  autosave();
+}
+
+function pushHistory() {
+  history.push(JSON.parse(JSON.stringify(segments)));
+  if (history.length > 40) history.shift();
+}
+
+function undo() {
+  if (!history.length) return;
+  segments   = history.pop();
+  selectedId = null;
+  currentPts = [];
+  updateSummary(); renderSegList(); draw();
+  autosave();
+}
+
+function clearAll() {
+  if (!segments.length && !currentPts.length) return;
+  if (!confirm('Clear all segments and scale? This cannot be undone.')) return;
+  pushHistory();
+  segments = []; currentPts = []; selectedId = null;
+  scaleLine = null; scalePixPerM = null;
+  updateScaleUI();
+  updateSummary(); renderSegList(); draw();
+  autosave();
+}
+
+// ── Scale ──────────────────────────────────────────────
+function confirmScale() {
+  if (!scaleLine || scaleLine.length < 2) { alert('Draw a reference line on the map first.'); return; }
+  const val  = parseFloat(document.getElementById('scale-val').value);
+  const unit = parseFloat(document.getElementById('scale-unit').value);
+  if (!val || val <= 0) { alert('Enter a valid length.'); return; }
+  const realM  = val * unit;
+  const pxDist = Math.hypot(scaleLine[1].x - scaleLine[0].x, scaleLine[1].y - scaleLine[0].y);
+  scalePixPerM = pxDist / realM;
+  updateScaleUI();
+  updateSummary();
+  document.getElementById('scale-status').textContent = 'Scale confirmed. Switch to Draw pipe to start mapping.';
+  autosave();
+}
+
+function clearScaleLine() {
+  scaleLine = null; scalePixPerM = null;
+  document.getElementById('scale-status').textContent = '';
+  updateScaleUI(); updateSummary(); draw();
+}
+
+function updateScaleUI() {
+  const txt = scalePixPerM
+    ? `1 m = ${scalePixPerM.toFixed(2)} px  ·  Scale set`
+    : 'Not set — use Scale mode to calibrate';
+  document.getElementById('scale-info-text').textContent = txt;
+}
+
+// ── Lengths ────────────────────────────────────────────
+function segLenPx(seg) {
+  let t = 0;
+  for (let i = 0; i < seg.points.length - 1; i++)
+    t += Math.hypot(seg.points[i+1].x - seg.points[i].x, seg.points[i+1].y - seg.points[i].y);
+  return t;
+}
+function segLenM(seg) {
+  return scalePixPerM ? segLenPx(seg) / scalePixPerM : null;
+}
+
+// ── Summary ────────────────────────────────────────────
+function updateSummary() {
+  const sizes = ['5','4','3'];
+  const data  = {};
+  sizes.forEach(s => { data[s] = { existing: 0, replace: 0, new: 0 }; });
+  segments.forEach(seg => {
+    const l = segLenM(seg);
+    if (l !== null) data[seg.dia][seg.status] += l;
+  });
+
+  const tbody = document.getElementById('sum-body');
+  tbody.innerHTML = '';
+  let tE = 0, tR = 0, tN = 0;
+  sizes.forEach(s => {
+    const d   = data[s];
+    const buy = d.replace + d.new;
+    tE += d.existing; tR += d.replace; tN += d.new;
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PIPE_COLOR[s]};margin-right:5px;vertical-align:middle"></span>${s}"</td>` +
+      `<td>${scalePixPerM ? d.existing.toFixed(1) : '—'}</td>` +
+      `<td>${scalePixPerM ? d.replace.toFixed(1)  : '—'}</td>` +
+      `<td>${scalePixPerM ? d.new.toFixed(1)       : '—'}</td>` +
+      `<td class="${buy > 0 ? 'net-buy' : 'net-ok'}">${scalePixPerM ? buy.toFixed(1) : '—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  const tBuy = tR + tN;
+  document.getElementById('ft-keep').textContent = scalePixPerM ? tE.toFixed(1) : '—';
+  document.getElementById('ft-rep').textContent  = scalePixPerM ? tR.toFixed(1) : '—';
+  document.getElementById('ft-new').textContent  = scalePixPerM ? tN.toFixed(1) : '—';
+  const ftBuy = document.getElementById('ft-buy');
+  ftBuy.textContent  = scalePixPerM ? tBuy.toFixed(1) + ' m' : '—';
+  ftBuy.className    = tBuy > 0 ? 'net-buy' : 'net-ok';
+}
+
+// ── Segment list ───────────────────────────────────────
+function renderSegList() {
+  const el = document.getElementById('seg-list');
+  if (!segments.length) {
+    el.innerHTML = '<div id="seg-empty">No segments yet.<br>Switch to Draw pipe and click the map to trace a pipe run.</div>';
+    return;
+  }
+  el.innerHTML = '';
+  segments.forEach((seg, i) => {
+    const l   = segLenM(seg);
+    const div = document.createElement('div');
+    div.className = 'seg-item' + (seg.id === selectedId ? ' sel' : '');
+    div.innerHTML =
+      `<div class="seg-dot" style="background:${PIPE_COLOR[seg.dia]}"></div>` +
+      `<div class="seg-body">` +
+        `<div class="seg-title">${seg.dia}" pipe &nbsp;<span class="seg-badge sb-${seg.status}">${seg.status}</span></div>` +
+        `<div class="seg-meta">${l !== null ? l.toFixed(1) + ' m' : 'set scale to measure'}</div>` +
+      `</div>` +
+      `<span class="seg-del" title="Delete segment" onclick="deleteSeg(${i},event)">&#215;</span>`;
+    div.onclick = () => { selectedId = seg.id; renderSegList(); draw(); };
+    el.appendChild(div);
+  });
+}
+
+// ── Tab switch ─────────────────────────────────────────
+function switchTab(t) {
+  document.getElementById('tab-summary').classList.toggle('visible',  t === 'summary');
+  document.getElementById('tab-segments').classList.toggle('visible', t === 'segments');
+  document.getElementById('tab-btn-summary').classList.toggle('active',  t === 'summary');
+  document.getElementById('tab-btn-segments').classList.toggle('active', t === 'segments');
+}
+
+// ── Draw ───────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (img) {
+    ctx.drawImage(img, pan.x, pan.y, img.width * zoom, img.height * zoom);
+  }
+
+  // Scale line
+  if (scaleLine && scaleLine.length >= 1) {
+    ctx.save();
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([5, 4]);
+    if (scaleLine.length === 2) {
+      const a = w2s(scaleLine[0].x, scaleLine[0].y);
+      const b = w2s(scaleLine[1].x, scaleLine[1].y);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      dot(a.x, a.y, '#fbbf24'); dot(b.x, b.y, '#fbbf24');
+    } else {
+      const a = w2s(scaleLine[0].x, scaleLine[0].y);
+      dot(a.x, a.y, '#fbbf24');
+    }
+    ctx.restore();
+  }
+
+  // Committed segments
+  segments.forEach(seg => drawSeg(seg));
+
+  // In-progress segment
+  if (currentPts.length > 0) {
+    ctx.save();
+    ctx.strokeStyle = '#ffffffaa';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    const s = w2s(currentPts[0].x, currentPts[0].y);
+    ctx.moveTo(s.x, s.y);
+    currentPts.slice(1).forEach(pt => { const p = w2s(pt.x, pt.y); ctx.lineTo(p.x, p.y); });
+    ctx.stroke();
+    currentPts.forEach(pt => { const p = w2s(pt.x, pt.y); dot(p.x, p.y, '#fff'); });
+    ctx.restore();
+  }
+}
+
+function drawSeg(seg) {
+  if (seg.points.length < 2) return;
+  const isSel = seg.id === selectedId;
+  const col   = PIPE_COLOR[seg.dia] || '#888';
+  const lw    = PIPE_WIDTH[seg.dia] || 2;
+  ctx.save();
+  ctx.setLineDash(STATUS_DASH[seg.status] || []);
+  ctx.strokeStyle = col;
+  ctx.lineWidth   = isSel ? lw + 2 : lw;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  if (isSel) { ctx.shadowColor = col; ctx.shadowBlur = 10; }
+  ctx.beginPath();
+  const s0 = w2s(seg.points[0].x, seg.points[0].y);
+  ctx.moveTo(s0.x, s0.y);
+  seg.points.slice(1).forEach(pt => { const p = w2s(pt.x, pt.y); ctx.lineTo(p.x, p.y); });
+  ctx.stroke();
+  ctx.restore();
+}
+
+function dot(x, y, col) {
+  ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2);
+  ctx.fillStyle = col; ctx.fill();
+}
+
+// ── Export CSV ─────────────────────────────────────────
+function exportCSV() {
+  if (!segments.length) { alert('No segments to export.'); return; }
+  const rows = ['Segment,Diameter (inch),Status,Length (m)'];
+  segments.forEach((seg, i) => {
+    const l = segLenM(seg);
+    rows.push([`Segment ${i+1}`, seg.dia, seg.status, l !== null ? l.toFixed(2) : 'no scale'].join(','));
+  });
+  rows.push('');
+  rows.push('Summary');
+  rows.push('Diameter,Keep (m),Replace (m),New (m),Buy (m)');
+  ['5','4','3'].forEach(s => {
+    const e = segments.filter(g => g.dia===s && g.status==='existing').reduce((a,g) => a + (segLenM(g)||0), 0);
+    const r = segments.filter(g => g.dia===s && g.status==='replace' ).reduce((a,g) => a + (segLenM(g)||0), 0);
+    const n = segments.filter(g => g.dia===s && g.status==='new'     ).reduce((a,g) => a + (segLenM(g)||0), 0);
+    rows.push([s+'"', e.toFixed(2), r.toFixed(2), n.toFixed(2), (r+n).toFixed(2)].join(','));
+  });
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'pipemap_export.csv'; a.click();
+}
+
+// ── Persistence ────────────────────────────────────────
+const STORE_KEY = 'pipemap_v1';
+
+function saveToStorage() {
+  const payload = {
+    segments,
+    scalePixPerM,
+    scaleLine,
+    segCounter,
+    savedAt: new Date().toISOString(),
+  };
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(payload));
+    document.getElementById('save-status').textContent = 'Saved ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    alert('Save failed — localStorage may be full.');
+  }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) { alert('No saved data found.'); return; }
+    const p = JSON.parse(raw);
+    segments     = p.segments     || [];
+    scalePixPerM = p.scalePixPerM || null;
+    scaleLine    = p.scaleLine    || null;
+    segCounter   = p.segCounter   || segments.length + 1;
+    selectedId   = null;
+    updateScaleUI();
+    updateSummary();
+    renderSegList();
+    draw();
+    const when = p.savedAt ? ' from ' + new Date(p.savedAt).toLocaleString() : '';
+    document.getElementById('save-status').textContent = 'Loaded' + when;
+  } catch(e) {
+    alert('Failed to load saved data.');
+  }
+}
+
+function autosave() {
+  saveToStorage();
+}
+
+// ── Init ───────────────────────────────────────────────
+setMode('select');
+renderSegList();
+updateSummary();
+
+// Auto-load if saved data exists
+if (localStorage.getItem(STORE_KEY)) {
+  loadFromStorage();
+}
+</script>
+</body>
+</html>
