@@ -190,7 +190,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
       <option value="3">3 inch</option>
     </select>
   </div>
-  <div class="tg">
+  <div class="tg" id="tg-status">
     <label>Status</label>
     <select id="sel-status">
       <option value="good">Good — reusable</option>
@@ -219,11 +219,11 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
         <div class="sum-block">
           <div class="sum-block-title">Procurement</div>
           <table class="sum-t">
-            <thead><tr><th>Size</th><th>Stock</th><th>Reuse</th><th>New runs</th><th>Buy</th></tr></thead>
+            <thead><tr><th>Size</th><th>Stock (good)</th><th>Required</th><th>Buy</th></tr></thead>
             <tbody id="sum-body"></tbody>
-            <tfoot><tr><td>Total</td><td id="ft-stock">—</td><td id="ft-reuse">—</td><td id="ft-new">—</td><td id="ft-buy">—</td></tr></tfoot>
+            <tfoot><tr><td>Total</td><td id="ft-stock">—</td><td id="ft-required">—</td><td id="ft-buy">—</td></tr></tfoot>
           </table>
-          <p style="font-size:10px;color:var(--text3);margin-top:5px">Buy = New runs + max(0, Reuse needed − Stock)</p>
+          <p style="font-size:10px;color:var(--text3);margin-top:5px">Buy = max(0, Required − Stock). All lengths in metres.</p>
         </div>
 
         <div class="sum-block">
@@ -235,11 +235,10 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
           <div class="sum-block-title">Legend</div>
           <div class="legend">
             <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Existing layout</div>
-            <div class="legend-row"><div class="ll" style="background:#4ade80"></div>Good pipe (reusable)</div>
+            <div class="legend-row"><div class="ll" style="background:#4ade80"></div>Good pipe (reusable stock)</div>
             <div class="legend-row"><div class="ll" style="background:repeating-linear-gradient(to right,#f87171 0 8px,transparent 8px 14px)"></div>Damaged — discard</div>
             <div style="font-size:10px;color:var(--text3);margin:5px 0 3px">New layout</div>
-            <div class="legend-row"><div class="ll" style="background:repeating-linear-gradient(to right,#c084fc 0 4px,transparent 4px 8px)"></div>Reuse (draw from stock)</div>
-            <div class="legend-row"><div class="ll" style="background:#60a5fa"></div>New pipe (purchase)</div>
+            <div class="legend-row"><div class="ll" style="background:#60a5fa"></div>Required run (auto-calculated)</div>
             <div style="font-size:10px;color:var(--text3);margin-top:5px">Line thickness = pipe diameter</div>
           </div>
         </div>
@@ -254,7 +253,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
       <div id="edit-panel">
         <div class="ep-title">Edit selected segment</div>
         <div class="ep-row"><label>Layer</label>
-          <select id="ep-layer">
+          <select id="ep-layer" onchange="onEditLayerChange()">
             <option value="existing">Existing</option>
             <option value="new">New layout</option>
           </select>
@@ -266,12 +265,10 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
             <option value="3">3 inch</option>
           </select>
         </div>
-        <div class="ep-row"><label>Status</label>
+        <div class="ep-row" id="ep-status-row"><label>Status</label>
           <select id="ep-status">
             <option value="good">Good — reusable</option>
             <option value="replace">Damaged — discard</option>
-            <option value="reuse">Reuse (new layout)</option>
-            <option value="new">New pipe (purchase)</option>
           </select>
         </div>
         <div class="ep-actions">
@@ -321,10 +318,9 @@ const PIPE_WIDTH = { '5':5,'4':3.2,'3':2 };
 
 function segStyle(status){
   switch(status){
-    case 'good':    return {color:null,      dash:null,    alpha:1.0};
-    case 'replace': return {color:'#f87171', dash:[10,6],  alpha:0.9};
-    case 'reuse':   return {color:'#c084fc', dash:[5,5],   alpha:0.9};
-    case 'new':     return {color:null,      dash:null,    alpha:1.0};
+    case 'good':     return {color:null,      dash:null,   alpha:1.0};
+    case 'replace':  return {color:'#f87171', dash:[10,6], alpha:0.9};
+    case 'required': return {color:'#60a5fa', dash:null,   alpha:1.0};
   }
   return {color:'#888',dash:null,alpha:1};
 }
@@ -473,12 +469,14 @@ map.on('click', e=>{
 function finishSegment(){
   if(currentPts.length<2){ currentPts=[]; drawMarkers.forEach(m=>m.remove()); drawMarkers=[]; return; }
   pushHistory();
+  const layer  = document.getElementById('sel-layer').value;
+  const status = layer==='new' ? 'required' : document.getElementById('sel-status').value;
   const seg={
     id: Date.now()+'_'+Math.random().toString(36).slice(2,7),
     latlngs: [...currentPts],
     dia:    document.getElementById('sel-dia').value,
-    layer:  document.getElementById('sel-layer').value,
-    status: document.getElementById('sel-status').value,
+    layer,
+    status,
     label:  'Seg '+segCounter++
   };
   segments.push(seg);
@@ -501,12 +499,18 @@ function deleteSelected(){
   pushToFirebase(); updateSummary(); renderSegList(); pipeLayer.redraw();
 }
 
+function onEditLayerChange(){
+  const layer = document.getElementById('ep-layer').value;
+  document.getElementById('ep-status-row').style.display = layer==='new' ? 'none' : '';
+}
+window.onEditLayerChange=onEditLayerChange;
+
 function applyEdit(){
   const seg=segments.find(s=>s.id===selectedId); if(!seg) return;
   pushHistory();
   seg.layer  = document.getElementById('ep-layer').value;
   seg.dia    = document.getElementById('ep-dia').value;
-  seg.status = document.getElementById('ep-status').value;
+  seg.status = seg.layer==='new' ? 'required' : document.getElementById('ep-status').value;
   pushToFirebase(); updateSummary(); renderSegList(); pipeLayer.redraw();
 }
 
@@ -572,13 +576,8 @@ function switchProject(){
 
 // ── Status options sync ────────────────────────────────
 function syncStatusOptions(){
-  const layer=document.getElementById('sel-layer').value;
-  const sel=document.getElementById('sel-status');
-  const cur=sel.value;
-  sel.innerHTML = layer==='existing'
-    ? '<option value="good">Good — reusable</option><option value="replace">Damaged — discard</option>'
-    : '<option value="reuse">Reuse (draw from stock)</option><option value="new">New pipe (purchase)</option>';
-  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+  const layer = document.getElementById('sel-layer').value;
+  document.getElementById('tg-status').style.display = layer==='new' ? 'none' : '';
 }
 window.syncStatusOptions=syncStatusOptions;
 
@@ -607,52 +606,47 @@ function segLenM(seg){
 // ── Summary ────────────────────────────────────────────
 function updateSummary(){
   const sizes=['5','4','3'], D={};
-  sizes.forEach(s=>{ D[s]={stock:0,discard:0,reuse:0,newrun:0}; });
+  sizes.forEach(s=>{ D[s]={stock:0,required:0}; });
   segments.forEach(seg=>{
     const l=segLenM(seg);
-    if(seg.layer==='existing'){
-      if(seg.status==='good')    D[seg.dia].stock   +=l;
-      if(seg.status==='replace') D[seg.dia].discard +=l;
-    } else {
-      if(seg.status==='reuse') D[seg.dia].reuse  +=l;
-      if(seg.status==='new')   D[seg.dia].newrun +=l;
-    }
+    if(seg.layer==='existing' && seg.status==='good')     D[seg.dia].stock    += l;
+    if(seg.layer==='new'      && seg.status==='required') D[seg.dia].required += l;
   });
   const tbody=document.getElementById('sum-body');
   tbody.innerHTML='';
-  let tS=0,tR=0,tN=0,tB=0;
+  let tS=0,tR=0,tB=0;
   sizes.forEach(s=>{
-    const d=D[s], sf=Math.max(0,d.reuse-d.stock), buy=d.newrun+sf;
-    tS+=d.stock; tR+=d.reuse; tN+=d.newrun; tB+=buy;
+    const d=D[s], buy=Math.max(0,d.required-d.stock);
+    tS+=d.stock; tR+=d.required; tB+=buy;
     const tr=document.createElement('tr');
     tr.innerHTML=
       `<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PIPE_COLOR[s]};margin-right:4px;vertical-align:middle"></span>${s}"</td>`+
-      `<td>${d.stock.toFixed(0)}</td><td>${d.reuse.toFixed(0)}</td><td>${d.newrun.toFixed(0)}</td>`+
+      `<td>${d.stock.toFixed(0)}</td>`+
+      `<td>${d.required.toFixed(0)}</td>`+
       `<td class="${buy>0?'c-buy':'c-ok'}">${buy.toFixed(0)}</td>`;
     tbody.appendChild(tr);
   });
-  document.getElementById('ft-stock').textContent=tS.toFixed(0);
-  document.getElementById('ft-reuse').textContent=tR.toFixed(0);
-  document.getElementById('ft-new').textContent=tN.toFixed(0);
+  document.getElementById('ft-stock').textContent    = tS.toFixed(0);
+  document.getElementById('ft-required').textContent = tR.toFixed(0);
   const ftB=document.getElementById('ft-buy');
   ftB.textContent=tB.toFixed(0)+' m'; ftB.className=tB>0?'c-buy':'c-ok';
 
   const rb=document.getElementById('reuse-balance'); rb.innerHTML='';
   sizes.forEach(s=>{
-    const d=D[s]; if(d.stock===0&&d.reuse===0) return;
-    const surplus=d.stock-d.reuse, sf=Math.max(0,-surplus);
+    const d=D[s]; if(d.stock===0&&d.required===0) return;
+    const surplus=d.stock-d.required, sf=Math.max(0,-surplus);
     let badge='',cls='';
-    if(sf>0){ badge='short '+sf.toFixed(0)+'m'; cls='rb-warn'; }
+    if(sf>0){ badge='buy '+sf.toFixed(0)+'m'; cls='rb-warn'; }
     else if(surplus>0.5){ badge='surplus '+surplus.toFixed(0)+'m'; cls='rb-surplus'; }
-    else { badge='balanced'; cls='rb-ok'; }
+    else { badge='exact'; cls='rb-ok'; }
     const row=document.createElement('div'); row.className='rb-row';
     row.innerHTML=
       `<div class="rb-size"><div class="rb-dot" style="background:${PIPE_COLOR[s]}"></div>${s}"</div>`+
-      `<div class="rb-nums"><span>stock ${d.stock.toFixed(0)}m</span><span>need ${d.reuse.toFixed(0)}m</span></div>`+
+      `<div class="rb-nums"><span>stock ${d.stock.toFixed(0)}m</span><span>need ${d.required.toFixed(0)}m</span></div>`+
       `<span class="rb-status ${cls}">${badge}</span>`;
     rb.appendChild(row);
   });
-  if(!rb.children.length) rb.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Map existing pipes to see reuse balance.</div>';
+  if(!rb.children.length) rb.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Map both layers to see balance.</div>';
 }
 
 // ── Segment list ───────────────────────────────────────
@@ -681,9 +675,10 @@ function renderSegList(){
   const ep=document.getElementById('edit-panel');
   if(sel){
     ep.classList.add('visible');
-    document.getElementById('ep-layer').value  =sel.layer;
-    document.getElementById('ep-dia').value    =sel.dia;
-    document.getElementById('ep-status').value =sel.status;
+    document.getElementById('ep-layer').value  = sel.layer;
+    document.getElementById('ep-dia').value    = sel.dia;
+    document.getElementById('ep-status-row').style.display = sel.layer==='new' ? 'none' : '';
+    if(sel.layer==='existing') document.getElementById('ep-status').value = sel.status;
   } else ep.classList.remove('visible');
 }
 
