@@ -15,374 +15,640 @@
   --accent:#4ade80;--accent-bg:#1a3d2a;
   --danger:#f87171;--danger-bg:#3d1a1a;
   --warn:#fbbf24;--warn-bg:#3d2e0a;
+  --info:#60a5fa;--info-bg:#0a1f3d;
   --radius:6px;
   font-family:'Inter',system-ui,-apple-system,sans-serif;
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text)}
 #app{display:flex;flex-direction:column;height:100vh}
 
-#header{display:flex;align-items:center;gap:10px;padding:0 14px;height:44px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;user-select:none}
-#logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;color:var(--accent)}
-#sync-status{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);border:1px solid var(--border2)}
+/* ── Header ── */
+#header{display:flex;align-items:center;gap:8px;padding:0 12px;height:42px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;user-select:none;flex-wrap:wrap}
+#logo{display:flex;align-items:center;gap:7px;font-weight:600;font-size:14px;color:var(--accent)}
+.hdiv{width:1px;height:18px;background:var(--border)}
+#sync-status{font-size:11px;padding:2px 7px;border-radius:10px;background:var(--surface2);border:1px solid var(--border2)}
 #sync-status.synced{border-color:#3d6040;color:var(--accent)}
 #sync-status.syncing{border-color:var(--warn-bg);color:var(--warn)}
 #sync-status.offline{border-color:#7f3030;color:var(--danger)}
 #save-status{font-size:11px;color:var(--text3);margin-left:auto}
-.hdr-div{width:1px;height:20px;background:var(--border)}
 
-#project-bar{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;font-size:12px}
+/* ── Project bar ── */
+#project-bar{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;font-size:12px;flex-wrap:wrap}
 #project-bar label{color:var(--text3)}
-#project-bar input{height:26px;font-size:12px;padding:0 8px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);width:160px}
-#project-bar input:focus{outline:none;border-color:var(--accent)}
+#project-bar input[type=text]{height:24px;font-size:12px;padding:0 7px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);width:150px}
+#project-bar input[type=text]:focus{outline:none;border-color:var(--accent)}
 
-#toolbar{display:flex;align-items:center;gap:3px;flex-wrap:wrap;padding:5px 10px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0}
-.tg{display:flex;align-items:center;gap:4px;padding-right:10px;margin-right:2px;border-right:1px solid var(--border)}
+/* ── Toolbar ── */
+#toolbar{display:flex;align-items:center;gap:3px;flex-wrap:wrap;padding:4px 8px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0}
+.tg{display:flex;align-items:center;gap:3px;padding-right:8px;margin-right:2px;border-right:1px solid var(--border)}
 .tg:last-child{border-right:none}
-.tg label{font-size:11px;color:var(--text3);white-space:nowrap}
-button,select,input[type=number]{font-family:inherit;font-size:12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);padding:0 9px;height:28px;cursor:pointer;transition:background .1s,border-color .1s;white-space:nowrap}
+.tg label{font-size:10px;color:var(--text3);white-space:nowrap}
+button,select,input[type=number]{font-family:inherit;font-size:11px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);padding:0 8px;height:26px;cursor:pointer;transition:background .1s,border-color .1s;white-space:nowrap}
 button:hover{background:var(--surface2);border-color:var(--accent)}
 button.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
 button.danger{border-color:#7f3030;color:var(--danger)}
 button.danger:hover{background:var(--danger-bg);border-color:var(--danger)}
+button.warn-act{border-color:#7f5a00;color:var(--warn)}
+button.warn-act:hover{background:var(--warn-bg);border-color:var(--warn)}
+input[type=number]{width:64px}
 
-.lt-pill{height:26px;padding:0 10px;border-radius:13px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--surface);color:var(--text2);transition:all .1s}
+/* ── Layer pills ── */
+.lt-pill{height:24px;padding:0 9px;border-radius:12px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--surface);color:var(--text2)}
 .lt-pill.on-existing{background:#2a1f0a;border-color:#c87a30;color:#f97316}
 .lt-pill.on-new{background:#0a1f2a;border-color:#3080c8;color:#60a5fa}
+.lt-pill.on-nodes{background:#1a2a0a;border-color:#5a9a30;color:#86efac}
 .lt-pill.on-elev{background:#1a1a3d;border-color:#7060c8;color:#c084fc}
 
+/* ── Main ── */
 #main{display:flex;flex:1;overflow:hidden;min-height:0}
 #map{flex:1;position:relative;z-index:0}
 
-#sidebar{width:270px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;z-index:500}
+/* ── Sidebar ── */
+#sidebar{width:275px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;z-index:500}
 #sidebar-tabs{display:flex;border-bottom:1px solid var(--border)}
-.stab{flex:1;height:34px;border:none;border-radius:0;background:transparent;color:var(--text2);font-size:12px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.stab{flex:1;height:32px;border:none;border-radius:0;background:transparent;color:var(--text2);font-size:11px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
 .stab:hover{color:var(--text);background:transparent;border-color:transparent}
 .stab.active{color:var(--accent);border-bottom-color:var(--accent);background:transparent}
 .tab-pane{display:none;flex:1;overflow-y:auto;flex-direction:column}
 .tab-pane.visible{display:flex}
 
+/* ── Summary ── */
 #sum-wrap{padding:10px 12px;flex:1;overflow-y:auto}
-.sum-block{margin-bottom:14px}
-.sum-block-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.sblock{margin-bottom:14px}
+.sblock-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
 table.sum-t{width:100%;border-collapse:collapse;font-size:11px}
 table.sum-t th{color:var(--text3);font-weight:400;text-align:right;padding:2px 3px;font-size:10px}
 table.sum-t th:first-child{text-align:left}
-table.sum-t td{color:var(--text);padding:4px 3px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border)}
+table.sum-t td{color:var(--text);padding:3px 3px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border)}
 table.sum-t td:first-child{text-align:left}
-table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font-weight:600;padding-top:5px}
+table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font-weight:600;padding-top:4px}
 .c-buy{color:var(--danger)}.c-ok{color:var(--accent)}.c-warn{color:var(--warn)}
 
-#reuse-balance{margin-top:6px}
-.rb-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:var(--radius);margin-bottom:4px;font-size:11px;background:var(--surface2)}
+/* ── Validation banner ── */
+.val-banner{margin:0 0 10px;padding:7px 9px;border-radius:var(--radius);font-size:11px;line-height:1.6;display:none}
+.val-banner.visible{display:block}
+.val-warn{background:var(--warn-bg);border:1px solid #7f5a00;color:var(--warn)}
+.val-ok{background:var(--accent-bg);border:1px solid #3d6040;color:var(--accent)}
+
+/* ── Network info rows ── */
+.net-row{display:flex;justify-content:space-between;padding:4px 8px;border-radius:var(--radius);margin-bottom:3px;font-size:11px;background:var(--surface2)}
+.net-row .nr-label{color:var(--text2)}
+.net-row .nr-val{font-weight:500}
+
+.rb-row{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-radius:var(--radius);margin-bottom:3px;font-size:11px;background:var(--surface2)}
 .rb-size{display:flex;align-items:center;gap:5px;font-weight:500}
-.rb-dot{width:8px;height:8px;border-radius:50%}
+.rb-dot{width:7px;height:7px;border-radius:50%}
 .rb-nums{display:flex;gap:6px;font-size:10px;color:var(--text2)}
-.rb-status{font-size:10px;font-weight:600;padding:2px 6px;border-radius:8px}
+.rb-status{font-size:10px;font-weight:600;padding:1px 5px;border-radius:8px}
 .rb-ok{background:var(--accent-bg);color:var(--accent)}
 .rb-warn{background:var(--warn-bg);color:var(--warn)}
 .rb-surplus{background:#1a3d2a;color:#86efac}
 
-/* Proximity alert banner */
-#prox-banner{display:none;margin:0 12px 10px;padding:8px 10px;border-radius:var(--radius);background:var(--warn-bg);border:1px solid #7f5a00;font-size:11px;color:var(--warn)}
-#prox-banner.visible{display:block}
-#prox-banner strong{display:block;margin-bottom:4px}
-#prox-banner .pb-btns{display:flex;gap:5px;margin-top:6px}
-#prox-banner .pb-btns button{flex:1;height:24px;font-size:11px}
-.pb-confirm{border-color:var(--accent)!important;color:var(--accent)!important}
-.pb-confirm:hover{background:var(--accent-bg)!important}
-
-.legend{display:flex;flex-direction:column;gap:5px}
-.legend-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)}
-.ll{width:26px;height:3px;flex-shrink:0}
-.export-row{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:5px}
+.legend{display:flex;flex-direction:column;gap:4px}
+.legend-row{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2)}
+.ll{width:22px;height:3px;flex-shrink:0}
+.export-row{padding:8px 12px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:5px}
 .export-row button{flex:1;font-size:11px}
 
-#seg-list{flex:1;overflow-y:auto;padding:6px}
-.seg-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:3px;font-size:11px;cursor:pointer;background:var(--surface2)}
-.seg-item:hover{border-color:var(--border2)}
-.seg-item.sel{border-color:var(--accent);background:var(--accent-bg)}
-.seg-item.needs-review{border-color:var(--warn)}
-.seg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.seg-body{flex:1;min-width:0}
-.seg-title{font-weight:500;color:var(--text);margin-bottom:1px}
-.seg-meta{color:var(--text2);font-size:10px}
-.seg-badge{font-size:10px;padding:1px 5px;border-radius:8px}
+/* ── Segments / Nodes list ── */
+#seg-list,#node-list{flex:1;overflow-y:auto;padding:5px}
+.list-item{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:3px;font-size:11px;cursor:pointer;background:var(--surface2)}
+.list-item:hover{border-color:var(--border2)}
+.list-item.sel{border-color:var(--accent);background:var(--accent-bg)}
+.list-item.unconnected{border-color:var(--danger)}
+.item-icon{width:18px;height:18px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.item-body{flex:1;min-width:0}
+.item-title{font-weight:500;color:var(--text);margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-meta{color:var(--text2);font-size:10px}
+.seg-badge{font-size:10px;padding:1px 4px;border-radius:7px}
 .sb-good{background:#1a3d2a;color:#4ade80}
 .sb-replace{background:#3d1a1a;color:#f87171}
 .sb-required{background:#0a1f2a;color:#60a5fa}
 .sb-update{background:#2a2a0a;color:#fbbf24}
 .sb-undecided{background:#2a2a2a;color:#aaa}
-.seg-del{color:var(--text3);cursor:pointer;font-size:15px;line-height:1;padding:0 2px;flex-shrink:0}
-.seg-del:hover{color:var(--danger)}
-#seg-empty{padding:14px 10px;font-size:11px;color:var(--text3);text-align:center;line-height:1.6}
+.item-del{color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;flex-shrink:0}
+.item-del:hover{color:var(--danger)}
+#seg-empty,#node-empty{padding:12px 10px;font-size:11px;color:var(--text3);text-align:center;line-height:1.6}
 
-#edit-panel{border-top:1px solid var(--border);padding:10px 12px;background:var(--surface2);display:none;flex-shrink:0}
+/* ── Edit panel ── */
+#edit-panel{border-top:1px solid var(--border);padding:9px 11px;background:var(--surface2);display:none;flex-shrink:0}
 #edit-panel.visible{display:block}
-.ep-title{font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-.ep-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.ep-row label{font-size:11px;color:var(--text3);width:52px;flex-shrink:0}
-.ep-row select{flex:1;height:26px;font-size:11px}
-.ep-actions{display:flex;gap:5px;margin-top:8px}
-.ep-actions button{flex:1;height:26px;font-size:11px}
+.ep-title{font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.ep-row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.ep-row label{font-size:11px;color:var(--text3);width:58px;flex-shrink:0}
+.ep-row select,.ep-row input{flex:1;height:24px;font-size:11px}
+.ep-actions{display:flex;gap:4px;margin-top:7px}
+.ep-actions button{flex:1;height:24px;font-size:11px}
 .ep-apply{border-color:var(--accent)!important;color:var(--accent)!important}
 .ep-apply:hover{background:var(--accent-bg)!important}
 
-#tipbar{position:absolute;bottom:0;left:0;right:270px;background:#0009;padding:4px 12px;font-size:11px;color:var(--text2);pointer-events:none;z-index:500}
+/* ── Tip bar ── */
+#tipbar{position:absolute;bottom:0;left:0;right:275px;background:#0009;padding:3px 10px;font-size:11px;color:var(--text2);pointer-events:none;z-index:500}
 
-/* Elevation marker popup override */
-.elev-popup .leaflet-popup-content-wrapper{background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);font-size:11px;font-family:inherit;padding:0}
-.elev-popup .leaflet-popup-content{margin:8px 10px}
-.elev-popup .leaflet-popup-tip{background:var(--surface)}
-
-::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+/* ── Leaflet ── */
 .leaflet-container{background:#1a2e1a}
 .leaflet-control-zoom a{background:var(--surface)!important;color:var(--text)!important;border-color:var(--border2)!important}
 .leaflet-control-zoom a:hover{background:var(--surface2)!important}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── Zones ── */
+.lt-pill.on-zones{background:#1a1a0a;border-color:#a8850a;color:#fbbf24}
+#tab-zones{flex-direction:column}
+#zone-wrap{padding:10px 12px;flex:1;overflow-y:auto}
+.zone-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:3px;font-size:11px;cursor:pointer;background:var(--surface2)}
+.zone-item:hover{border-color:var(--border2)}
+.zone-item.sel{border-color:var(--accent);background:var(--accent-bg)}
+.zone-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.zone-body{flex:1;min-width:0}
+.zone-title{font-weight:500;color:var(--text)}
+.zone-meta{font-size:10px;color:var(--text2)}
+.zone-del{color:var(--text3);cursor:pointer;font-size:14px;padding:0 2px;flex-shrink:0}
+.zone-del:hover{color:var(--danger)}
+#zone-empty{padding:14px 10px;font-size:11px;color:var(--text3);text-align:center;line-height:1.6}
+#zone-analysis{border-top:1px solid var(--border);padding:10px 12px;background:var(--surface2);display:none;flex-shrink:0;font-size:11px}
+#zone-analysis.visible{display:block}
+.za-title{font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.za-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px}
+.za-row .zr-label{color:var(--text2)}
+.za-row .zr-val{font-weight:500}
+.za-pipes{margin:6px 0}
+.za-pipe-row{display:flex;justify-content:space-between;padding:3px 6px;border-radius:3px;font-size:10px;margin-bottom:2px;background:var(--surface)}
+.za-est{margin-top:8px;padding:6px 8px;background:var(--surface);border-radius:var(--radius);font-size:11px;line-height:1.7}
+.za-inputs{margin-top:6px;display:flex;flex-direction:column;gap:4px}
+.za-inp-row{display:flex;align-items:center;gap:5px}
+.za-inp-row label{font-size:10px;color:var(--text3);width:100px;flex-shrink:0}
+.za-inp-row input{flex:1;height:22px;font-size:10px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);padding:0 5px}
+.za-run-btn{width:100%;height:24px;font-size:11px;margin-top:6px;border-color:var(--accent);color:var(--accent)}
+.za-run-btn:hover{background:var(--accent-bg)}
+.za-result{margin-top:6px;font-size:10px;color:var(--text2);line-height:1.7;padding:5px 7px;background:var(--surface);border-radius:var(--radius)}
+
+#tab-hydraulics{flex-direction:column}
+#hyd-wrap{padding:10px 12px;flex:1;overflow-y:auto}
+.hyd-run-btn{width:100%;height:30px;font-size:12px;border-color:var(--accent);color:var(--accent);margin-bottom:10px}
+.hyd-run-btn:hover{background:var(--accent-bg)}
+.hyd-section{margin-bottom:14px}
+.hyd-section-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.hyd-node-row{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-radius:var(--radius);margin-bottom:3px;font-size:11px;background:var(--surface2)}
+.hyd-node-row .hn-label{display:flex;align-items:center;gap:5px;font-weight:500}
+.hyd-node-row .hn-val{font-variant-numeric:tabular-nums;font-size:11px}
+.hyd-pipe-row{padding:4px 8px;border-radius:var(--radius);margin-bottom:3px;font-size:11px;background:var(--surface2);display:flex;justify-content:space-between}
+.hyd-pipe-row .hp-label{color:var(--text2);font-size:10px}
+.hyd-note{font-size:10px;color:var(--text3);line-height:1.5;padding:6px 8px;background:var(--surface2);border-radius:var(--radius);margin-bottom:8px}
+.p-green{color:#4ade80}.p-yellow{color:#fbbf24}.p-orange{color:#fb923c}.p-red{color:#f87171}.p-black{color:#aaa}
+/* Pipe hydraulics inputs */
+.hyd-pipe-input{display:flex;flex-direction:column;gap:4px;padding:6px 8px;background:var(--surface2);border-radius:var(--radius);margin-bottom:4px;font-size:11px}
+.hyd-pipe-input .pi-title{font-weight:500;color:var(--text);margin-bottom:2px}
+.hyd-pipe-input .pi-row{display:flex;align-items:center;gap:5px}
+.hyd-pipe-input .pi-row label{color:var(--text3);width:80px;flex-shrink:0;font-size:10px}
+.hyd-pipe-input .pi-row select,.hyd-pipe-input .pi-row input{flex:1;height:22px;font-size:10px}
+/* Well/tank hydraulics inputs */
+.hyd-src-input{display:flex;flex-direction:column;gap:4px;padding:6px 8px;background:var(--surface2);border-radius:var(--radius);margin-bottom:4px;font-size:11px}
+.hyd-src-input .si-title{font-weight:500;color:var(--text);margin-bottom:2px;display:flex;align-items:center;gap:6px}
+.hyd-src-input .si-row{display:flex;align-items:center;gap:5px}
+.hyd-src-input .si-row label{color:var(--text3);width:110px;flex-shrink:0;font-size:10px}
+.hyd-src-input .si-row input{flex:1;height:22px;font-size:10px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);padding:0 5px}
 </style>
 </head>
 <body>
 <div id="app">
 
+<!-- Header -->
 <div id="header">
   <div id="logo">
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <rect width="22" height="22" rx="5" fill="#1a3d2a"/>
-      <path d="M3 11h4v3h8v-3h4" stroke="#4ade80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="7" cy="11" r="1.5" fill="#4ade80"/>
-      <circle cx="15" cy="11" r="1.5" fill="#4ade80"/>
-    </svg>
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><rect width="22" height="22" rx="5" fill="#1a3d2a"/><path d="M3 11h4v3h8v-3h4" stroke="#4ade80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.5" fill="#4ade80"/><circle cx="15" cy="11" r="1.5" fill="#4ade80"/></svg>
     PipeMap
   </div>
-  <div class="hdr-div"></div>
-  <div id="layer-toggle" style="display:flex;gap:4px">
+  <div class="hdiv"></div>
+  <div style="display:flex;gap:3px">
     <button class="lt-pill on-existing" id="lt-existing" onclick="toggleLayer('existing')">&#9679; Existing</button>
     <button class="lt-pill on-new"      id="lt-new"      onclick="toggleLayer('new')">&#9679; New layout</button>
-    <button class="lt-pill on-elev"     id="lt-elev"     onclick="toggleLayer('elev')">&#9651; Elevation</button>
+    <button class="lt-pill on-nodes"    id="lt-nodes"    onclick="toggleLayer('nodes')">&#9632; Nodes</button>
+    <button class="lt-pill on-zones"    id="lt-zones"    onclick="toggleLayer('zones')">&#9650; Zones</button>
+    <button class="lt-pill on-elev"     id="lt-elev"     onclick="toggleLayer('elev')">&#9651; Elev</button>
   </div>
-  <div class="hdr-div"></div>
+  <div class="hdiv"></div>
   <span id="sync-status" class="offline">&#9679; offline</span>
   <span id="save-status">not saved</span>
 </div>
 
+<!-- Project bar -->
 <div id="project-bar">
   <label>Project:</label>
-  <input type="text" id="project-id" value="mafraq-farm-1" placeholder="project name">
-  <button onclick="switchProject()" style="height:26px;font-size:11px">Load / Create</button>
-  <span style="font-size:11px;color:var(--text3);margin-left:6px">Share this project name with collaborators for live sync.</span>
+  <input type="text" id="project-id" value="mafraq-farm-1">
+  <button onclick="switchProject()" style="height:24px;font-size:11px">Load</button>
+  <div class="hdiv"></div>
+  <button onclick="migrateSegments()" class="warn-act" title="Convert old pipe segments to node-edge model">&#8645; Migrate old data</button>
+  <span style="font-size:11px;color:var(--text3);margin-left:4px">Share project name for live sync.</span>
 </div>
 
+<!-- Toolbar -->
 <div id="toolbar">
   <div class="tg">
     <label>Mode</label>
-    <button id="btn-draw"   onclick="setMode('draw')">&#9998; Draw pipe</button>
-    <button id="btn-select" onclick="setMode('select')">&#8592; Select</button>
-    <button id="btn-elev"   onclick="setMode('elev')" title="Click map to drop elevation point">&#9651; Elev point</button>
+    <button id="btn-pipe"     onclick="setMode('pipe')"     title="Draw a pipe between nodes">&#9998; Pipe</button>
+    <button id="btn-node"     onclick="setMode('node')"     title="Place a well, tank or endpoint">&#9632; Node</button>
+    <button id="btn-zone"     onclick="setMode('zone')"     title="Draw a zone polygon">&#9650; Zone</button>
+    <button id="btn-select"   onclick="setMode('select')"   title="Select and edit">&#8592; Select</button>
+    <button id="btn-elev"     onclick="setMode('elev')"     title="Drop elevation point">&#9651; Elev</button>
+  </div>
+  <div class="tg" id="tg-node-type">
+    <label>Node type</label>
+    <select id="sel-node-type">
+      <option value="well">&#9675; Well</option>
+      <option value="tank">&#9633; Tank</option>
+      <option value="pump">&#9651; Pump station</option>
+      <option value="endpoint">&#9670; Endpoint</option>
+      <option value="junction">&#9679; Junction</option>
+    </select>
   </div>
   <div class="tg">
     <label>Layer</label>
     <select id="sel-layer" onchange="onLayerChange()">
-      <option value="existing">Existing layout</option>
+      <option value="existing">Existing</option>
       <option value="new">New layout</option>
     </select>
   </div>
   <div class="tg">
     <label>Diameter</label>
     <select id="sel-dia">
-      <option value="5">5 inch</option>
-      <option value="4">4 inch</option>
-      <option value="3">3 inch</option>
-      <option value="2">2 inch</option>
-      <option value="20mm">20 mm</option>
+      <option value="5">5″</option>
+      <option value="4">4″</option>
+      <option value="3">3″</option>
+      <option value="2">2″</option>
+      <option value="20mm">20mm</option>
     </select>
   </div>
   <div class="tg" id="tg-status">
-    <label>Status</label>
+    <label>Condition</label>
     <select id="sel-status">
-      <option value="good">Good — reusable</option>
-      <option value="replace">Damaged — discard</option>
+      <option value="good">Good</option>
+      <option value="fair">Fair</option>
+      <option value="poor">Poor</option>
+      <option value="replace">Replace</option>
     </select>
   </div>
   <div class="tg">
-    <label>Proximity</label>
-    <select id="sel-prox-thresh" title="Max distance to existing pipe to auto-classify as Update">
-      <option value="3">3 m</option>
-      <option value="5" selected>5 m</option>
-      <option value="10">10 m</option>
-      <option value="15">15 m</option>
-    </select>
+    <label>Snap (m)</label>
+    <input type="number" id="snap-thresh" value="5" min="1" max="50" step="1" title="Auto-snap/connect distance in metres">
+  </div>
+  <div class="tg">
+    <label>Prox (m)</label>
+    <input type="number" id="prox-thresh" value="5" min="1" max="30" step="1" title="Update vs new-pipe proximity threshold">
   </div>
   <div class="tg">
     <button onclick="undo()">&#8617; Undo</button>
-    <button class="danger" onclick="clearAll()">Clear all</button>
+    <button class="danger" onclick="clearAll()">Clear</button>
   </div>
 </div>
 
+<!-- Main -->
 <div id="main">
   <div id="map"></div>
-
   <div id="sidebar">
     <div id="sidebar-tabs">
-      <button class="stab active" id="tab-btn-summary"  onclick="switchTab('summary')">Summary</button>
-      <button class="stab"        id="tab-btn-segments" onclick="switchTab('segments')">Segments</button>
+      <button class="stab active" id="tab-btn-summary"     onclick="switchTab('summary')">Summary</button>
+      <button class="stab"        id="tab-btn-pipes"       onclick="switchTab('pipes')">Pipes</button>
+      <button class="stab"        id="tab-btn-nodes"       onclick="switchTab('nodes')">Nodes</button>
+      <button class="stab"        id="tab-btn-zones"       onclick="switchTab('zones')">&#9650; Zones</button>
+      <button class="stab"        id="tab-btn-hydraulics"  onclick="switchTab('hydraulics')">&#9781; Hyd</button>
     </div>
 
-    <!-- Summary tab -->
+    <!-- Summary -->
     <div id="tab-summary" class="tab-pane visible">
       <div id="sum-wrap">
 
-        <div id="prox-banner">
-          <strong>&#9888; Review needed</strong>
-          <span id="prox-banner-msg"></span>
-          <div class="pb-btns">
-            <button class="pb-confirm" onclick="confirmProx('update')">&#10003; Mark as Update</button>
-            <button onclick="confirmProx('required')">Mark as New pipe</button>
-          </div>
+        <div class="sblock">
+          <div class="sblock-title">Network</div>
+          <div id="net-validation" class="val-banner">—</div>
+          <div id="net-stats"></div>
         </div>
 
-        <div class="sum-block">
-          <div class="sum-block-title">Procurement</div>
+        <div class="sblock">
+          <div class="sblock-title">Procurement</div>
           <table class="sum-t">
             <thead><tr><th>Size</th><th>Stock</th><th>Required</th><th>Update</th><th>Buy</th></tr></thead>
             <tbody id="sum-body"></tbody>
             <tfoot><tr><td>Total</td><td id="ft-stock">—</td><td id="ft-req">—</td><td id="ft-upd">—</td><td id="ft-buy">—</td></tr></tfoot>
           </table>
-          <p style="font-size:10px;color:var(--text3);margin-top:5px">Buy = max(0, Required − Stock). Updates reuse existing trench, still need pipe.</p>
+          <p style="font-size:10px;color:var(--text3);margin-top:4px">Buy = max(0, Required − Stock). Updates reuse existing trench.</p>
         </div>
 
-        <div class="sum-block">
-          <div class="sum-block-title">Stock balance</div>
+        <div class="sblock">
+          <div class="sblock-title">Stock balance</div>
           <div id="reuse-balance"></div>
         </div>
 
-        <div class="sum-block">
-          <div class="sum-block-title">Elevation points</div>
-          <div id="elev-list-sum" style="font-size:11px;color:var(--text3)">No elevation points yet.</div>
-        </div>
-
-        <div class="sum-block">
-          <div class="sum-block-title">Legend</div>
+        <div class="sblock">
+          <div class="sblock-title">Legend</div>
           <div class="legend">
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Existing layout</div>
-            <div class="legend-row"><div class="ll" style="background:#4ade80"></div>Good (reusable stock)</div>
-            <div class="legend-row"><div class="ll" style="background:repeating-linear-gradient(to right,#f87171 0 8px,transparent 8px 14px)"></div>Damaged — discard</div>
-            <div style="font-size:10px;color:var(--text3);margin:5px 0 3px">New layout</div>
-            <div class="legend-row"><div class="ll" style="background:#60a5fa"></div>New pipe (auto: far from existing)</div>
-            <div class="legend-row"><div class="ll" style="background:#fbbf24"></div>Update (auto: near existing pipe)</div>
-            <div class="legend-row"><div class="ll" style="background:#aaa"></div>Undecided — review needed</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:5px">Thickness = diameter &nbsp;·&nbsp; &#9651; = elevation point</div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Nodes</div>
+            <div class="legend-row"><span style="color:#22c55e;font-size:13px">W</span>&nbsp;Well (source)</div>
+            <div class="legend-row"><span style="color:#60a5fa;font-size:13px">T</span>&nbsp;Tank / storage pool</div>
+            <div class="legend-row"><span style="color:#f97316;font-size:13px">E</span>&nbsp;Endpoint / emitter</div>
+            <div class="legend-row"><span style="color:#aaa;font-size:13px">J</span>&nbsp;Junction (auto)</div>
+            <div class="legend-row"><span style="color:var(--danger);font-size:13px">!</span>&nbsp;Unconnected endpoint</div>
+            <div style="font-size:10px;color:var(--text3);margin:5px 0 2px">Pipes — existing</div>
+            <div class="legend-row"><div class="ll" style="background:#4ade80"></div>Good</div>
+            <div class="legend-row"><div class="ll" style="background:#a3e635"></div>Fair</div>
+            <div class="legend-row"><div class="ll" style="background:repeating-linear-gradient(to right,#f97316 0 6px,transparent 6px 10px)"></div>Poor</div>
+            <div class="legend-row"><div class="ll" style="background:repeating-linear-gradient(to right,#f87171 0 8px,transparent 8px 14px)"></div>Replace</div>
+            <div style="font-size:10px;color:var(--text3);margin:5px 0 2px">Pipes — new layout</div>
+            <div class="legend-row"><div class="ll" style="background:#60a5fa"></div>New pipe</div>
+            <div class="legend-row"><div class="ll" style="background:#fbbf24"></div>Update (near existing)</div>
+            <div class="legend-row"><div class="ll" style="background:#aaa;opacity:.6"></div>Undecided</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Thickness = diameter</div>
           </div>
         </div>
+
       </div>
       <div class="export-row">
         <button onclick="exportCSV()">&#8595; CSV</button>
       </div>
     </div>
 
-    <!-- Segments tab -->
-    <div id="tab-segments" class="tab-pane">
+    <!-- Pipes list -->
+    <div id="tab-pipes" class="tab-pane">
       <div id="seg-list"></div>
       <div id="edit-panel">
-        <div class="ep-title">Edit segment</div>
+        <div class="ep-title">Edit pipe</div>
         <div class="ep-row"><label>Layer</label>
-          <select id="ep-layer" onchange="onEditLayerChange()">
+          <select id="ep-layer" onchange="onEpLayerChange()">
             <option value="existing">Existing</option>
             <option value="new">New layout</option>
           </select>
         </div>
         <div class="ep-row"><label>Diameter</label>
           <select id="ep-dia">
-            <option value="5">5 inch</option>
-            <option value="4">4 inch</option>
-            <option value="3">3 inch</option>
-            <option value="2">2 inch</option>
-            <option value="20mm">20 mm</option>
+            <option value="5">5″</option><option value="4">4″</option>
+            <option value="3">3″</option><option value="2">2″</option>
+            <option value="20mm">20mm</option>
           </select>
         </div>
-        <div class="ep-row" id="ep-status-row"><label>Status</label>
-          <select id="ep-status">
-            <option value="good">Good — reusable</option>
-            <option value="replace">Damaged — discard</option>
+        <div class="ep-row" id="ep-cond-row"><label>Condition</label>
+          <select id="ep-cond">
+            <option value="good">Good</option><option value="fair">Fair</option>
+            <option value="poor">Poor</option><option value="replace">Replace</option>
           </select>
         </div>
         <div class="ep-row" id="ep-newtype-row" style="display:none"><label>Type</label>
           <select id="ep-newtype">
             <option value="required">New pipe</option>
-            <option value="update">Update (near existing)</option>
+            <option value="update">Update</option>
             <option value="undecided">Undecided</option>
           </select>
         </div>
+        <div class="ep-row"><label>Direction</label>
+          <select id="ep-dir">
+            <option value="auto">Auto (from hydraulics)</option>
+            <option value="forward">Forward (start→end)</option>
+            <option value="reverse">Reverse (end→start)</option>
+            <option value="both">Both (bidirectional)</option>
+            <option value="none">None (hide arrow)</option>
+          </select>
+        </div>
+        <div class="ep-row" id="ep-valve-row"><label>Valve</label>
+          <select id="ep-valve">
+            <option value="open">Open</option>
+            <option value="partial">Partial (50%)</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div class="ep-row">
+          <label>Zone main</label>
+          <select id="ep-zone-main">
+            <option value="">No</option>
+            <option value="yes">Yes — estimate feeders</option>
+          </select>
+        </div>
+        <div id="ep-zone-fields" style="display:none;margin-top:4px;padding:6px 0;border-top:1px solid var(--border)">
+          <div class="ep-row"><label>Area (dunum)</label>
+            <input type="number" id="ep-zone-area" placeholder="e.g. 50" min="1" style="flex:1;height:24px;font-size:11px">
+          </div>
+          <div class="ep-row"><label>Tree spacing (m)</label>
+            <input type="number" id="ep-zone-spacing" value="7" min="3" max="12" style="flex:1;height:24px;font-size:11px">
+          </div>
+          <div class="ep-row"><label>Emitters/tree</label>
+            <input type="number" id="ep-zone-emitters" value="2" min="1" max="8" style="flex:1;height:24px;font-size:11px">
+          </div>
+          <div class="ep-row"><label>L/hr per emitter</label>
+            <input type="number" id="ep-zone-lhr" value="4" min="1" max="16" style="flex:1;height:24px;font-size:11px">
+          </div>
+          <button onclick="calcZoneEstimate()" style="width:100%;height:24px;font-size:11px;margin-top:4px;border-color:var(--accent);color:var(--accent)">&#9654; Estimate feeders</button>
+          <div id="ep-zone-result" style="margin-top:6px;font-size:10px;color:var(--text2);line-height:1.7"></div>
+        </div>
         <div class="ep-actions">
-          <button class="ep-apply" onclick="applyEdit()">&#10003; Apply</button>
-          <button class="danger"   onclick="deleteSelected()">&#215; Delete</button>
+          <button class="ep-apply" onclick="applyPipeEdit()">&#10003; Apply</button>
+          <button class="danger"   onclick="deleteSelectedPipe()">&#215; Delete</button>
         </div>
       </div>
     </div>
 
-  </div>
-</div>
+    <!-- Nodes list -->
+    <div id="tab-nodes" class="tab-pane">
+      <div id="node-list"></div>
+      <div id="node-edit-panel" style="border-top:1px solid var(--border);padding:9px 11px;background:var(--surface2);display:none;flex-shrink:0">
+        <div class="ep-title">Edit node</div>
+        <div class="ep-row"><label>Type</label>
+          <select id="nep-type" onchange="onNepTypeChange()">
+            <option value="well">Well</option><option value="tank">Tank</option>
+            <option value="pump">Pump station</option>
+            <option value="endpoint">Endpoint</option><option value="junction">Junction</option>
+          </select>
+        </div>
+        <div class="ep-row"><label>Label</label>
+          <input id="nep-label" type="text" style="flex:1;height:24px;font-size:11px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);padding:0 6px">
+        </div>
+        <!-- Well fields -->
+        <div id="nep-well-fields" style="display:none">
+          <div class="ep-row"><label>Pump head (m)</label>
+            <input id="nep-pump" type="number" placeholder="e.g. 40" min="0" style="flex:1;height:24px;font-size:11px">
+          </div>
+          <div class="ep-row"><label>Pump flow (m³/hr)</label>
+            <input id="nep-pumpflow" type="number" placeholder="e.g. 10" min="0" style="flex:1;height:24px;font-size:11px">
+          </div>
+          <div class="ep-row"><label>Nominal depth (m)</label>
+            <input id="nep-depth" type="number" placeholder="e.g. 60" min="0" style="flex:1;height:24px;font-size:11px">
+          </div>
+          <div class="ep-row"><label>Drawdown factor</label>
+            <input id="nep-drawdown" type="number" placeholder="0.15" min="0" max="0.5" step="0.01" style="flex:1;height:24px;font-size:11px">
+          </div>
+        </div>
+        <!-- Tank fields -->
+        <div id="nep-tank-fields" style="display:none">
+          <div class="ep-row"><label>Water level (m)</label>
+            <input id="nep-wl" type="number" placeholder="m above base" min="0" style="flex:1;height:24px;font-size:11px">
+          </div>
+          <div class="ep-row"><label>Booster head (m)</label>
+            <input id="nep-tankpump" type="number" placeholder="0 = gravity" min="0" style="flex:1;height:24px;font-size:11px">
+          </div>
+        </div>
+        <!-- Pump station fields -->
+        <div id="nep-pumpstation-fields" style="display:none">
+          <div class="ep-row"><label>Pump head (m)</label>
+            <input id="nep-ps-head" type="number" placeholder="e.g. 20" min="0" style="flex:1;height:24px;font-size:11px">
+          </div>
+          <div class="ep-row"><label>Pump flow (m³/hr)</label>
+            <input id="nep-ps-flow" type="number" placeholder="e.g. 8" min="0" style="flex:1;height:24px;font-size:11px">
+          </div>
+        </div>
+        <!-- Redundancy role — shown for wells, tanks, pump stations -->
+        <div id="nep-role-row" style="display:none">
+          <div class="ep-row"><label>Role</label>
+            <select id="nep-role">
+              <option value="primary">Primary</option>
+              <option value="standby">Standby (failover)</option>
+            </select>
+          </div>
+          <div class="ep-row" id="nep-covers-row" style="display:none"><label>Covers</label>
+            <select id="nep-covers">
+              <option value="">— select primary —</option>
+            </select>
+          </div>
+        </div>
+        <div class="ep-actions">
+          <button class="ep-apply" onclick="applyNodeEdit()">&#10003; Apply</button>
+          <button class="danger"   onclick="deleteSelectedNode()">&#215; Delete</button>
+        </div>
+      </div>
+    </div>
 
-<div id="tipbar" id="tipbar">Draw: click points, double-click to finish &nbsp;·&nbsp; Select: click pipe &nbsp;·&nbsp; Elev: click map for elevation &nbsp;·&nbsp; Scroll to zoom</div>
+    <!-- Zones tab -->
+    <div id="tab-zones" class="tab-pane">
+      <div id="zone-wrap">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5">
+          Switch to Zone mode and click the map to draw a zone polygon. Double-click to close it. The app will find all pipes whose midpoint falls inside.
+        </div>
+        <div id="zone-list"></div>
+      </div>
+      <div id="zone-analysis">
+        <div class="za-title">Zone analysis</div>
+        <div id="za-stats"></div>
+        <div class="za-pipes" id="za-pipes"></div>
+        <div class="za-inputs">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Feeder estimation</div>
+          <div class="za-inp-row"><label>Tree spacing (m)</label><input type="number" id="za-spacing" value="7" min="3" max="12"></div>
+          <div class="za-inp-row"><label>Emitters per tree</label><input type="number" id="za-emitters" value="2" min="1" max="8"></div>
+          <div class="za-inp-row"><label>L/hr per emitter</label><input type="number" id="za-lhr" value="4" min="1" max="16"></div>
+        </div>
+        <button class="za-run-btn" onclick="runZoneEstimate()">&#9654; Estimate feeders</button>
+        <div class="za-result" id="za-result" style="display:none"></div>
+        <div class="ep-actions" style="margin-top:8px">
+          <button onclick="renameZone()" style="flex:1;height:24px;font-size:11px">&#9998; Rename</button>
+          <button class="danger" onclick="deleteSelectedZone()" style="flex:1;height:24px;font-size:11px">&#215; Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hydraulics tab -->
+    <div id="tab-hydraulics" class="tab-pane">
+      <div id="hyd-wrap">
+        <div class="hyd-note">
+          Runs on <strong>new layout pipes only</strong>. Set source parameters and pipe service factors, then click Run. Uses Hazen-Williams friction formula with condition multipliers.
+        </div>
+        <div class="hyd-section">
+          <div class="hyd-section-title">Sources (wells &amp; tanks)</div>
+          <div id="hyd-sources-inputs"></div>
+        </div>
+        <div class="hyd-section">
+          <div class="hyd-section-title">Pipe parameters</div>
+          <div id="hyd-pipe-inputs"></div>
+        </div>
+        <button class="hyd-run-btn" onclick="runHydraulics()">&#9654; Run hydraulic analysis</button>
+        <div class="hyd-section" id="hyd-results-section" style="display:none">
+          <div class="hyd-section-title">Node pressures — Normal operation</div>
+          <div id="hyd-node-results"></div>
+        </div>
+        <div class="hyd-section" id="hyd-redundancy-section" style="display:none">
+          <div class="hyd-section-title">Redundancy scenarios</div>
+          <div id="hyd-redundancy-results"></div>
+        </div>
+        <div class="hyd-section" id="hyd-pipe-results-section" style="display:none">
+          <div class="hyd-section-title">Pipe friction losses</div>
+          <div id="hyd-pipe-results"></div>
+        </div>
+        <div class="hyd-section" id="hyd-warnings-section" style="display:none">
+          <div class="hyd-section-title">&#9888; Warnings</div>
+          <div id="hyd-warnings"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+</div><!-- /main -->Pipe: click start node or map to begin, click end node or double-click to finish &nbsp;·&nbsp; Node: click map to place &nbsp;·&nbsp; Select: click any element</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module">
-import { initializeApp }                       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onValue, set }      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { initializeApp }                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 // ── Firebase ───────────────────────────────────────────
-const firebaseConfig = {
-  apiKey:            "AIzaSyAkqts691Hg1uXhLDRloKoAgNotCwYx6XY",
-  authDomain:        "pipemap-45e15.firebaseapp.com",
-  databaseURL:       "https://pipemap-45e15-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId:         "pipemap-45e15",
-  storageBucket:     "pipemap-45e15.firebasestorage.app",
-  messagingSenderId: "172642929084",
-  appId:             "1:172642929084:web:11605fc95947cbbb3403b9"
+const firebaseConfig={
+  apiKey:"AIzaSyAkqts691Hg1uXhLDRloKoAgNotCwYx6XY",
+  authDomain:"pipemap-45e15.firebaseapp.com",
+  databaseURL:"https://pipemap-45e15-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"pipemap-45e15",storageBucket:"pipemap-45e15.firebasestorage.app",
+  messagingSenderId:"172642929084",appId:"1:172642929084:web:11605fc95947cbbb3403b9"
 };
-const fbApp  = initializeApp(firebaseConfig);
-const db     = getDatabase(fbApp);
+const fbApp=initializeApp(firebaseConfig);
+const db=getDatabase(fbApp);
 
 // ── State ──────────────────────────────────────────────
-let segments     = [];
-let elevPoints   = [];         // {id, lat, lng, elev, label}
-let selectedId   = null;
-let pendingProxId= null;       // segment id awaiting prox review
-let mode         = 'select';
-let layerVisible = {existing:true, new:true, elev:true};
-let history      = [];
-let segCounter   = 1;
-let elevCounter  = 1;
-let currentPts   = [];
-let projectId    = 'mafraq-farm-1';
-let fbUnsub      = null;
-let ignoreNext   = false;
-let drawMarkers  = [];
+// NODES: {id, type:'well'|'tank'|'junction'|'endpoint', lat, lng, elev, label, pumpHead, waterLevel}
+// PIPES: {id, label, startNodeId, endNodeId, waypoints:[[lat,lng]...], dia, layer, status, condition}
+// ELEVPTS: {id, lat, lng, elev, label}
+let nodes=[], pipes=[], elevPts=[], zones=[];
+let selectedPipeId=null, selectedNodeId=null, selectedZoneId=null;
+let mode='select';
+let layerVisible={existing:true,new:true,nodes:true,elev:true,zones:true};
+let history=[];
+let pipeCounter=1, nodeCounter=1, elevCounter=1;
+let drawPts=[],drawStartNodeId=null;
+let drawMarkers=[];
+let zonePts=[], zoneMarkers=[], zoneCounter=1;
+// Leaflet zone polygon overlays
+const zoneLeafletLayers={};
+let projectId='mafraq-farm-1';
+let fbUnsub=null, ignoreNext=false;
 
-// ── Visual config ──────────────────────────────────────
-const PIPE_COLOR = {'5':'#f97316','4':'#4ade80','3':'#60a5fa','2':'#e879f9','20mm':'#94a3b8'};
-const PIPE_WIDTH = {'5':5,'4':3.5,'3':2.5,'2':1.8,'20mm':1.2};
+// ── Visual ─────────────────────────────────────────────
+const PIPE_COLOR={'5':'#f97316','4':'#4ade80','3':'#60a5fa','2':'#e879f9','20mm':'#94a3b8'};
+const PIPE_WIDTH={'5':5,'4':3.5,'3':2.5,'2':1.8,'20mm':1.2};
+const NODE_COLOR={well:'#22c55e',tank:'#60a5fa',pump:'#a855f7',endpoint:'#f97316',junction:'#6b7280'};
+const NODE_LABEL={well:'W',tank:'T',pump:'P',endpoint:'E',junction:'J'};
 
-function segStyle(status){
-  switch(status){
-    case 'good':      return {color:null,      dash:null,   alpha:1.0};
-    case 'replace':   return {color:'#f87171', dash:[10,6], alpha:0.9};
-    case 'required':  return {color:'#60a5fa', dash:null,   alpha:1.0};
-    case 'update':    return {color:'#fbbf24', dash:null,   alpha:1.0};
-    case 'undecided': return {color:'#aaaaaa', dash:[3,3],  alpha:0.8};
+// Last hydraulics run results — used to colour nodes on map
+let lastHydHeads=null;
+
+function pipeStyle(pipe){
+  const layer=pipe.layer, status=pipe.status, cond=pipe.condition||'good';
+  if(layer==='existing'){
+    switch(cond){
+      case 'good':    return {color:PIPE_COLOR[pipe.dia]||'#4ade80',dash:null,alpha:1.0};
+      case 'fair':    return {color:'#a3e635',dash:null,alpha:0.9};
+      case 'poor':    return {color:'#f97316',dash:[6,4],alpha:0.85};
+      case 'replace': return {color:'#f87171',dash:[10,6],alpha:0.85};
+    }
+  } else {
+    switch(status){
+      case 'required':  return {color:'#60a5fa',dash:null,alpha:1.0};
+      case 'update':    return {color:'#fbbf24',dash:null,alpha:1.0};
+      case 'undecided': return {color:'#aaaaaa',dash:[3,3],alpha:0.75};
+    }
   }
   return {color:'#888',dash:null,alpha:1};
 }
 
-// ── Leaflet map ────────────────────────────────────────
-const map = L.map('map',{center:[32.35,36.20],zoom:15,zoomControl:true});
+// ── Map ────────────────────────────────────────────────
+const map=L.map('map',{center:[32.35,36.20],zoom:15});
 L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
-  attribution:'Map data &copy; Google', maxZoom:21, maxNativeZoom:21
+  attribution:'Map data &copy; Google',maxZoom:21,maxNativeZoom:21
 }).addTo(map);
 
 // ── SVG pipe layer ─────────────────────────────────────
-const PipeLayer = L.Layer.extend({
+const PipeLayer=L.Layer.extend({
   onAdd(map){
     this._map=map;
     const pane=map.getPane('overlayPane');
@@ -393,165 +659,241 @@ const PipeLayer = L.Layer.extend({
     map.on('moveend zoomend viewreset',()=>{this._svg.style.display='';this._redraw();});
     this._redraw();
   },
-  onRemove(){ this._svg.remove(); },
-  redraw(){ this._redraw(); },
+  onRemove(){this._svg.remove();},
+  redraw(){this._redraw();},
   _redraw(){
     const svg=this._svg;
-    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
     ['existing','new'].forEach(layer=>{
-      if(!layerVisible[layer]) return;
-      segments.filter(s=>s.layer===layer).forEach(seg=>this._drawSeg(svg,seg));
+      if(!layerVisible[layer])return;
+      pipes.filter(p=>p.layer===layer).forEach(pipe=>this._drawPipe(svg,pipe));
     });
-    if(mode==='draw'&&currentPts.length>1){
-      const pts=currentPts.map(ll=>this._map.latLngToLayerPoint(L.latLng(ll[0],ll[1])));
-      const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
-      pl.setAttribute('points',pts.map(p=>`${p.x},${p.y}`).join(' '));
-      pl.setAttribute('stroke','#ffffff88');pl.setAttribute('stroke-width','1.5');
-      pl.setAttribute('stroke-dasharray','4 4');pl.setAttribute('fill','none');
-      svg.appendChild(pl);
+    // ghost line while drawing
+    if(mode==='pipe'&&drawPts.length>0){
+      drawPts.forEach((pt,i)=>{
+        if(i===0)return;
+        const a=this._map.latLngToLayerPoint(L.latLng(drawPts[i-1][0],drawPts[i-1][1]));
+        const b=this._map.latLngToLayerPoint(L.latLng(pt[0],pt[1]));
+        const pl=mkPoly([a,b],'#fff8',1.5,[4,4]);svg.appendChild(pl);
+      });
     }
   },
-  _drawSeg(svg,seg){
-    if(!seg.latlngs||seg.latlngs.length<2) return;
-    const pts=seg.latlngs.map(ll=>this._map.latLngToLayerPoint(L.latLng(ll[0],ll[1])));
-    const isSel=seg.id===selectedId;
-    const st=segStyle(seg.status);
-    const col=st.color||PIPE_COLOR[seg.dia]||'#888';
-    const lw=(PIPE_WIDTH[seg.dia]||2)+(isSel?2:0);
-    if(isSel){
-      const g=document.createElementNS('http://www.w3.org/2000/svg','polyline');
-      g.setAttribute('points',pts.map(p=>`${p.x},${p.y}`).join(' '));
-      g.setAttribute('stroke',col);g.setAttribute('stroke-width',String(lw+6));
-      g.setAttribute('stroke-opacity','0.2');g.setAttribute('fill','none');
-      g.setAttribute('stroke-linecap','round');svg.appendChild(g);
-    }
-    const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
-    pl.setAttribute('points',pts.map(p=>`${p.x},${p.y}`).join(' '));
-    pl.setAttribute('stroke',col);
-    pl.setAttribute('stroke-width',String(lw));
+  _drawPipe(svg,pipe){
+    const pts=this._pipePoints(pipe);
+    if(!pts||pts.length<2)return;
+    const isSel=pipe.id===selectedPipeId;
+    const st=pipeStyle(pipe);
+    const lw=(PIPE_WIDTH[pipe.dia]||2)+(isSel?2:0);
+    if(isSel){const g=mkPoly(pts,st.color,lw+6,null);g.setAttribute('stroke-opacity','0.2');svg.appendChild(g);}
+    const pl=mkPoly(pts,st.color,lw,st.dash);
     pl.setAttribute('stroke-opacity',String(st.alpha));
-    if(st.dash) pl.setAttribute('stroke-dasharray',st.dash.join(' '));
-    pl.setAttribute('fill','none');
-    pl.setAttribute('stroke-linecap','round');pl.setAttribute('stroke-linejoin','round');
-    pl.style.cursor=mode==='select'?'pointer':'inherit';
-    pl.style.pointerEvents='stroke';
-    pl.addEventListener('click',ev=>{
-      if(mode==='select'){ev.stopPropagation();selectedId=seg.id;switchTab('segments');renderSegList();pipeLayer.redraw();}
-    });
+    pl.style.pointerEvents='stroke';pl.style.cursor=mode==='select'?'pointer':'default';
+    pl.addEventListener('click',ev=>{if(mode==='select'){ev.stopPropagation();selectPipe(pipe.id);}});
     svg.appendChild(pl);
-    if(isSel) pts.forEach(p=>{
-      const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
-      c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r','4');
-      c.setAttribute('fill',col);svg.appendChild(c);
-    });
-    // Undecided warning dot
-    if(seg.status==='undecided'){
-      const mid=pts[Math.floor(pts.length/2)];
-      const w=document.createElementNS('http://www.w3.org/2000/svg','text');
-      w.setAttribute('x',mid.x);w.setAttribute('y',mid.y-8);
-      w.setAttribute('text-anchor','middle');w.setAttribute('font-size','12');
-      w.setAttribute('fill','#fbbf24');w.textContent='?';
-      svg.appendChild(w);
+    // Direction arrow
+    const dir=pipe.direction||'auto';
+    if(dir!=='none'){
+      const midIdx=Math.floor((pts.length-1)/2);
+      const a=pts[midIdx],b=pts[midIdx+1]||pts[midIdx];
+      const reverse=dir==='reverse';
+      const p1=reverse?b:a, p2=reverse?a:b;
+      drawArrow(svg,p1,p2,st.color,lw);
+      if(dir==='both') drawArrow(svg,p2,p1,st.color,lw);
     }
+    // Valve icon — show on pipes connected to a tank
+    const sn=nodes.find(n=>n.id===pipe.startNodeId);
+    const en=nodes.find(n=>n.id===pipe.endNodeId);
+    const hasTankConn=sn?.type==='tank'||en?.type==='tank';
+    if(hasTankConn&&pipe.valveState&&pipe.valveState!=='open'){
+      const vp=pts[Math.min(1,pts.length-1)];
+      const vc=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      vc.setAttribute('cx',vp.x);vc.setAttribute('cy',vp.y);vc.setAttribute('r','6');
+      vc.setAttribute('fill',pipe.valveState==='closed'?'#f87171':'#fbbf24');
+      vc.setAttribute('stroke','#fff');vc.setAttribute('stroke-width','1.5');
+      svg.appendChild(vc);
+      const vt=document.createElementNS('http://www.w3.org/2000/svg','text');
+      vt.setAttribute('x',vp.x);vt.setAttribute('y',vp.y+4);
+      vt.setAttribute('text-anchor','middle');vt.setAttribute('font-size','8');
+      vt.setAttribute('fill','#fff');vt.setAttribute('font-weight','700');
+      vt.textContent=pipe.valveState==='closed'?'✕':'~';
+      svg.appendChild(vt);
+    }
+    if(pipe.status==='undecided'){
+      const mid=pts[Math.floor(pts.length/2)];
+      const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x',mid.x);t.setAttribute('y',mid.y-8);
+      t.setAttribute('text-anchor','middle');t.setAttribute('font-size','12');
+      t.setAttribute('fill','#fbbf24');t.textContent='?';svg.appendChild(t);
+    }
+  },
+  _pipePoints(pipe){
+    const pts=[];
+    const sn=nodes.find(n=>n.id===pipe.startNodeId);
+    const en=nodes.find(n=>n.id===pipe.endNodeId);
+    if(!sn||!en)return null;
+    pts.push(this._map.latLngToLayerPoint(L.latLng(sn.lat,sn.lng)));
+    (pipe.waypoints||[]).forEach(wp=>pts.push(this._map.latLngToLayerPoint(L.latLng(wp[0],wp[1]))));
+    pts.push(this._map.latLngToLayerPoint(L.latLng(en.lat,en.lng)));
+    return pts;
   }
 });
+function mkPoly(pts,stroke,lw,dash){
+  const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  pl.setAttribute('points',pts.map(p=>`${p.x},${p.y}`).join(' '));
+  pl.setAttribute('stroke',stroke||'#fff');
+  pl.setAttribute('stroke-width',String(lw||1));
+  pl.setAttribute('fill','none');
+  pl.setAttribute('stroke-linecap','round');
+  pl.setAttribute('stroke-linejoin','round');
+  if(dash)pl.setAttribute('stroke-dasharray',dash.join(' '));
+  return pl;
+}
+function drawArrow(svg,a,b,color,lw){
+  const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
+  if(len<8)return;
+  const ux=dx/len,uy=dy/len;
+  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+  const sz=Math.max(6,lw*2);
+  const px=-uy,py=ux;
+  const tip={x:mx+ux*sz,y:my+uy*sz};
+  const bl={x:mx-ux*sz*0.5+px*sz*0.5,y:my-uy*sz*0.5+py*sz*0.5};
+  const br={x:mx-ux*sz*0.5-px*sz*0.5,y:my-uy*sz*0.5-py*sz*0.5};
+  const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  poly.setAttribute('points',`${tip.x},${tip.y} ${bl.x},${bl.y} ${br.x},${br.y}`);
+  poly.setAttribute('fill',color);poly.setAttribute('opacity','0.85');
+  svg.appendChild(poly);
+}
 const pipeLayer=new PipeLayer();
 pipeLayer.addTo(map);
 
-// ── Elevation markers ──────────────────────────────────
-const elevMarkers={};
-const elevIcon = L.divIcon({
-  html:'<div style="width:10px;height:10px;background:#c084fc;border:2px solid #fff;border-radius:50%;margin:-5px 0 0 -5px"></div>',
-  className:'', iconSize:[10,10]
-});
-
-function renderElevMarkers(){
-  // Remove old
-  Object.values(elevMarkers).forEach(m=>m.remove());
-  for(const k in elevMarkers) delete elevMarkers[k];
-  if(!layerVisible.elev) return;
-  elevPoints.forEach(ep=>{
-    const mk=L.marker([ep.lat,ep.lng],{icon:elevIcon})
-      .bindPopup(`<b>${ep.label}</b><br>${ep.elev!==null?ep.elev+'m asl':'fetching...'}`,{className:'elev-popup'})
-      .addTo(map);
-    elevMarkers[ep.id]=mk;
+// ── Node markers ───────────────────────────────────────
+const nodeLeafletMarkers={};
+function mkNodeIcon(node,unconnected){
+  const col=unconnected?'#f87171':NODE_COLOR[node.type]||'#aaa';
+  const lbl=unconnected?'!':NODE_LABEL[node.type]||'?';
+  return L.divIcon({
+    html:`<div style="width:20px;height:20px;background:${col};border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin:-10px 0 0 -10px;box-shadow:0 1px 3px #0006">${lbl}</div>`,
+    className:'',iconSize:[20,20]
   });
-  updateElevSummary();
+}
+function renderNodeMarkers(){
+  Object.values(nodeLeafletMarkers).forEach(m=>m.remove());
+  for(const k in nodeLeafletMarkers)delete nodeLeafletMarkers[k];
+  if(!layerVisible.nodes)return;
+  nodes.forEach(node=>{
+    const unconnected=isUnconnected(node);
+    const mk=L.marker([node.lat,node.lng],{icon:mkNodeIcon(node,unconnected),zIndexOffset:1000})
+      .bindTooltip(node.label||node.type,{permanent:false,direction:'top',offset:[0,-12]})
+      .addTo(map);
+    mk.on('click',e=>{
+      L.DomEvent.stopPropagation(e);
+      if(mode==='pipe'){
+        // Clicking a node while drawing a pipe: snap start or end
+        handleNodeClickWhileDrawing(node);
+      } else if(mode==='select'){
+        selectNode(node.id);
+      }
+    });
+    nodeLeafletMarkers[node.id]=mk;
+  });
+}
+function isUnconnected(node){
+  if(node.type==='junction')return false; // junctions auto-created, always connected
+  return!pipes.some(p=>p.startNodeId===node.id||p.endNodeId===node.id);
 }
 
-async function fetchElevation(lat,lng){
-  try{
-    const res=await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat.toFixed(6)},${lng.toFixed(6)}`);
-    const data=await res.json();
-    return data.results[0].elevation;
-  }catch(e){ return null; }
+// ── Elevation markers ──────────────────────────────────
+const elevLeafletMarkers={};
+const elevIcon=L.divIcon({html:'<div style="width:8px;height:8px;background:#c084fc;border:2px solid #fff;border-radius:50%;margin:-4px 0 0 -4px"></div>',className:'',iconSize:[8,8]});
+function renderElevMarkers(){
+  Object.values(elevLeafletMarkers).forEach(m=>m.remove());
+  for(const k in elevLeafletMarkers)delete elevLeafletMarkers[k];
+  if(!layerVisible.elev)return;
+  elevPts.forEach(ep=>{
+    const mk=L.marker([ep.lat,ep.lng],{icon:elevIcon})
+      .bindTooltip(`${ep.label}: ${ep.elev!==null?ep.elev+'m':'?'}`,{permanent:false,direction:'top'})
+      .addTo(map);
+    elevLeafletMarkers[ep.id]=mk;
+  });
 }
 
-// ── Map interaction ────────────────────────────────────
-map.on('click', async e=>{
-  if(mode==='draw'){
-    currentPts.push([e.latlng.lat,e.latlng.lng]);
-    const mk=L.circleMarker(e.latlng,{radius:4,color:'#fff',fillColor:'#fff',fillOpacity:1,weight:1}).addTo(map);
-    drawMarkers.push(mk);
-    pipeLayer.redraw();
-  } else if(mode==='elev'){
-    const id=Date.now()+'_e'+Math.random().toString(36).slice(2,5);
-    const ep={id, lat:e.latlng.lat, lng:e.latlng.lng, elev:null, label:'P'+elevCounter++};
-    elevPoints.push(ep);
-    renderElevMarkers();
-    pushToFirebase();
-    // Async fetch
-    const elev=await fetchElevation(e.latlng.lat,e.latlng.lng);
-    if(elev!==null){
-      ep.elev=elev;
-    } else {
-      const manual=prompt(`Could not auto-fetch elevation for ${ep.label}.\nEnter elevation in metres (or cancel to leave blank):`);
-      ep.elev = manual!==null&&manual.trim()!=='' ? parseFloat(manual) : null;
-    }
-    renderElevMarkers();
-    // Update popup
-    if(elevMarkers[ep.id]) elevMarkers[ep.id].setPopupContent(`<b>${ep.label}</b><br>${ep.elev!==null?ep.elev+'m asl':'unknown'}`);
-    pushToFirebase();
-  } else if(mode==='select'){
-    selectedId=null; renderSegList(); pipeLayer.redraw();
-  }
-});
+// ── Haversine ──────────────────────────────────────────
+function haversineM(a,b){
+  const R=6371000,dLat=(b[0]-a[0])*Math.PI/180,dLon=(b[1]-a[1])*Math.PI/180;
+  const x=Math.sin(dLat/2)**2+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function pipeLenM(pipe){
+  const sn=nodes.find(n=>n.id===pipe.startNodeId),en=nodes.find(n=>n.id===pipe.endNodeId);
+  if(!sn||!en)return 0;
+  const pts=[[sn.lat,sn.lng],...(pipe.waypoints||[]),[en.lat,en.lng]];
+  let t=0;for(let i=0;i<pts.length-1;i++)t+=haversineM(pts[i],pts[i+1]);
+  return t;
+}
 
-map.on('dblclick',e=>{
-  if(mode==='draw'&&currentPts.length>1){L.DomEvent.stopPropagation(e);finishSegment();}
-});
+// ── Snap: find nearest node within threshold ───────────
+function snapThresh(){return parseFloat(document.getElementById('snap-thresh').value)||5;}
+function proxThresh(){return parseFloat(document.getElementById('prox-thresh').value)||5;}
 
-map.on('mousemove',e=>{
-  if(mode!=='draw'||currentPts.length===0) return;
-  pipeLayer.redraw();
-  const svg=pipeLayer._svg; if(!svg) return;
-  const last=map.latLngToLayerPoint(L.latLng(currentPts[currentPts.length-1][0],currentPts[currentPts.length-1][1]));
-  const cur=map.latLngToLayerPoint(e.latlng);
-  const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
-  pl.setAttribute('points',`${last.x},${last.y} ${cur.x},${cur.y}`);
-  pl.setAttribute('stroke','#ffffff88');pl.setAttribute('stroke-width','1.5');
-  pl.setAttribute('stroke-dasharray','4 4');pl.setAttribute('fill','none');
-  svg.appendChild(pl);
-});
+function nearestNode(lat,lng,excludeId){
+  let best=null,bestD=Infinity;
+  nodes.forEach(n=>{
+    if(n.id===excludeId)return;
+    const d=haversineM([lat,lng],[n.lat,n.lng]);
+    if(d<bestD){bestD=d;best=n;}
+  });
+  return bestD<=snapThresh()?best:null;
+}
+
+function getOrCreateNode(lat,lng,excludeId){
+  const snap=nearestNode(lat,lng,excludeId);
+  if(snap)return{node:snap,created:false};
+  const node={
+    id:'n'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    type:'junction',lat,lng,elev:null,
+    label:'J'+nodeCounter++,pumpHead:0,waterLevel:null
+  };
+  nodes.push(node);
+  return{node,created:true};
+}
+
+// ── Classify new pipe by proximity to existing ─────────
+function classifyNewPipe(pipe){
+  const thresh=proxThresh();
+  const existingNodes=nodes.filter(n=>pipes.some(p=>(p.startNodeId===n.id||p.endNodeId===n.id)&&p.layer==='existing'));
+  if(!existingNodes.length)return'required';
+  const sn=nodes.find(n=>n.id===pipe.startNodeId),en=nodes.find(n=>n.id===pipe.endNodeId);
+  if(!sn||!en)return'required';
+  const pts=[[sn.lat,sn.lng],...(pipe.waypoints||[]),[en.lat,en.lng]];
+  const dists=pts.map(pt=>Math.min(...existingNodes.map(n=>haversineM(pt,[n.lat,n.lng]))));
+  const minD=Math.min(...dists),maxD=Math.max(...dists);
+  if(maxD<=thresh)return'update';
+  if(minD>thresh*3)return'required';
+  return'undecided';
+}
 
 // ── Mode ───────────────────────────────────────────────
 function setMode(m){
-  if(mode==='draw'&&currentPts.length>1) finishSegment();
-  currentPts=[]; drawMarkers.forEach(mk=>mk.remove()); drawMarkers=[];
+  if(mode==='pipe'&&drawPts.length>1)finishPipe();
+  if(mode==='zone'&&zonePts.length>2)finishZone();
+  drawPts=[];drawStartNodeId=null;
+  zonePts=[];zoneMarkers.forEach(mk=>mk.remove());zoneMarkers=[];
+  drawMarkers.forEach(mk=>mk.remove());drawMarkers=[];
   mode=m;
-  ['draw','select','elev'].forEach(id=>{
+  ['pipe','node','zone','select','elev'].forEach(id=>{
     const b=document.getElementById('btn-'+id);
-    if(b) b.classList.toggle('active',id===m);
+    if(b)b.classList.toggle('active',id===m);
   });
-  map.dragging[m==='draw'?'disable':'enable']();
-  document.getElementById('map').style.cursor=m==='draw'||m==='elev'?'crosshair':'';
+  document.getElementById('tg-node-type').style.display=m==='node'?'':'none';
+  map.dragging[m==='pipe'||m==='zone'?'disable':'enable']();
+  document.getElementById('map').style.cursor=(m==='pipe'||m==='node'||m==='elev'||m==='zone')?'crosshair':'';
   pipeLayer.redraw();
 }
 window.setMode=setMode;
 
 function onLayerChange(){
-  const layer=document.getElementById('sel-layer').value;
-  document.getElementById('tg-status').style.display=layer==='new'?'none':'';
+  const l=document.getElementById('sel-layer').value;
+  document.getElementById('tg-status').style.display=l==='new'?'none':'';
 }
 window.onLayerChange=onLayerChange;
 
@@ -560,142 +902,339 @@ function toggleLayer(l){
   const btn=document.getElementById('lt-'+l);
   btn.classList.toggle('on-'+l,layerVisible[l]);
   btn.style.opacity=layerVisible[l]?'1':'0.4';
-  if(l==='elev') renderElevMarkers(); else pipeLayer.redraw();
+  if(l==='nodes')renderNodeMarkers();
+  else if(l==='elev')renderElevMarkers();
+  else if(l==='zones')renderZoneLayers();
+  else pipeLayer.redraw();
 }
 window.toggleLayer=toggleLayer;
 
-// ── Proximity detection ────────────────────────────────
-// Returns metres from a latlng to the nearest existing-layer segment point
-function distToExistingM(lat,lng){
-  let minD=Infinity;
-  segments.filter(s=>s.layer==='existing').forEach(seg=>{
-    if(!seg.latlngs) return;
-    seg.latlngs.forEach(ll=>{ minD=Math.min(minD,haversineM([lat,lng],ll)); });
-  });
-  return minD;
-}
+// ── Map click handling ─────────────────────────────────
+map.on('click',async e=>{
+  const lat=e.latlng.lat,lng=e.latlng.lng;
 
-function classifyNewSeg(seg){
-  const thresh=parseFloat(document.getElementById('sel-prox-thresh').value);
-  if(!segments.some(s=>s.layer==='existing')) return 'required'; // no existing mapped yet
-  const dists=seg.latlngs.map(ll=>distToExistingM(ll[0],ll[1]));
-  const minD=Math.min(...dists);
-  const maxD=Math.max(...dists);
-  if(maxD<=thresh) return 'update';        // all points close → update
-  if(minD>thresh*3) return 'required';     // all points far → new pipe
-  return 'undecided';                      // mixed → needs review
-}
+  if(mode==='node'){
+    placeNode(lat,lng);
+  } else if(mode==='pipe'){
+    // Check if near an existing node
+    const snap=nearestNode(lat,lng,null);
+    const pt=snap?[snap.lat,snap.lng]:[lat,lng];
+    if(drawPts.length===0){
+      drawStartNodeId=snap?snap.id:null;
+    }
+    drawPts.push(pt);
+    const mk=L.circleMarker(L.latLng(pt[0],pt[1]),{radius:4,color:'#fff',fillColor:'#fff',fillOpacity:1,weight:1}).addTo(map);
+    drawMarkers.push(mk);
+    pipeLayer.redraw();
+  } else if(mode==='zone'){
+    zonePts.push([lat,lng]);
+    const mk=L.circleMarker([lat,lng],{radius:4,color:'#fbbf24',fillColor:'#fbbf24',fillOpacity:1,weight:1}).addTo(map);
+    zoneMarkers.push(mk);
+    renderZoneGhost();
+  } else if(mode==='elev'){
+    await placeElevPoint(lat,lng);
+  } else if(mode==='select'){
+    selectedPipeId=null;selectedNodeId=null;
+    renderPipeList();renderNodeList();pipeLayer.redraw();
+  }
+});
 
-// ── Segment operations ─────────────────────────────────
-function finishSegment(){
-  if(currentPts.length<2){currentPts=[];drawMarkers.forEach(m=>m.remove());drawMarkers=[];return;}
-  pushHistory();
-  const layer=document.getElementById('sel-layer').value;
-  let status;
-  if(layer==='existing'){
-    status=document.getElementById('sel-status').value;
+map.on('dblclick',e=>{
+  if(mode==='pipe'&&drawPts.length>1){L.DomEvent.stopPropagation(e);finishPipe();}
+  if(mode==='zone'&&zonePts.length>2){L.DomEvent.stopPropagation(e);finishZone();}
+});
+
+map.on('mousemove',e=>{
+  if(mode!=='pipe'||drawPts.length===0)return;
+  pipeLayer.redraw();
+  const svg=pipeLayer._svg;if(!svg)return;
+  const last=map.latLngToLayerPoint(L.latLng(drawPts[drawPts.length-1][0],drawPts[drawPts.length-1][1]));
+  const cur=map.latLngToLayerPoint(e.latlng);
+  const snap=nearestNode(e.latlng.lat,e.latlng.lng,null);
+  const target=snap?map.latLngToLayerPoint(L.latLng(snap.lat,snap.lng)):cur;
+  const pl=mkPoly([last,target],'#ffffff88',1.5,[4,4]);
+  svg.appendChild(pl);
+  if(snap){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',target.x);c.setAttribute('cy',target.y);c.setAttribute('r','8');
+    c.setAttribute('stroke','#4ade80');c.setAttribute('stroke-width','2');c.setAttribute('fill','none');
+    svg.appendChild(c);
+  }
+});
+
+function handleNodeClickWhileDrawing(node){
+  if(drawPts.length===0){
+    drawStartNodeId=node.id;
+    drawPts.push([node.lat,node.lng]);
+    const mk=L.circleMarker([node.lat,node.lng],{radius:5,color:'#4ade80',fillColor:'#4ade80',fillOpacity:1,weight:1}).addTo(map);
+    drawMarkers.push(mk);
+    pipeLayer.redraw();
   } else {
-    status=classifyNewSeg({latlngs:currentPts});
+    // End on this node
+    drawPts.push([node.lat,node.lng]);
+    finishPipe(node.id);
   }
-  const seg={
-    id:Date.now()+'_'+Math.random().toString(36).slice(2,7),
-    latlngs:[...currentPts],
-    dia:document.getElementById('sel-dia').value,
-    layer, status,
-    label:'Seg '+segCounter++
-  };
-  segments.push(seg);
-  selectedId=seg.id;
-  currentPts=[];drawMarkers.forEach(m=>m.remove());drawMarkers=[];
-
-  if(status==='undecided'){
-    pendingProxId=seg.id;
-    showProxBanner(seg);
-    switchTab('summary');
-  }
-
-  pushToFirebase();
-  updateSummary();renderSegList();pipeLayer.redraw();
 }
 
-function showProxBanner(seg){
-  const thresh=parseFloat(document.getElementById('sel-prox-thresh').value);
-  document.getElementById('prox-banner-msg').textContent=
-    `Segment "${seg.label}" has points both near and far from existing pipes (threshold: ${thresh}m). Is this an update to an existing run, or an entirely new pipe?`;
-  document.getElementById('prox-banner').classList.add('visible');
-}
-
-function confirmProx(type){
-  if(!pendingProxId) return;
-  const seg=segments.find(s=>s.id===pendingProxId);
-  if(seg) seg.status=type;
-  pendingProxId=null;
-  document.getElementById('prox-banner').classList.remove('visible');
-  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();
-}
-window.confirmProx=confirmProx;
-
-function deleteSeg(idx,e){
-  e.stopPropagation();pushHistory();
-  if(selectedId===segments[idx].id) selectedId=null;
-  segments.splice(idx,1);
-  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();
-}
-function deleteSelected(){
-  const idx=segments.findIndex(s=>s.id===selectedId);if(idx===-1)return;
-  pushHistory();segments.splice(idx,1);selectedId=null;
-  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();
-}
-function applyEdit(){
-  const seg=segments.find(s=>s.id===selectedId);if(!seg)return;
+// ── Place node ─────────────────────────────────────────
+function placeNode(lat,lng){
   pushHistory();
-  seg.layer=document.getElementById('ep-layer').value;
-  seg.dia  =document.getElementById('ep-dia').value;
-  seg.status=seg.layer==='existing'
-    ? document.getElementById('ep-status').value
-    : document.getElementById('ep-newtype').value;
-  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();
+  const type=document.getElementById('sel-node-type').value;
+  const snap=nearestNode(lat,lng,null);
+  if(snap&&(type==='well'||type==='tank'||type==='endpoint')){
+    // Upgrade existing junction
+    snap.type=type;
+    snap.label=NODE_LABEL[type]+nodeCounter++;
+    pushToFirebase();renderNodeMarkers();renderNodeList();updateSummary();
+    return;
+  }
+  const node={
+    id:'n'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    type,lat,lng,elev:null,
+    label:NODE_LABEL[type]+nodeCounter++,
+    pumpHead:0,waterLevel:null
+  };
+  nodes.push(node);
+  pushToFirebase();renderNodeMarkers();renderNodeList();updateSummary();
 }
-function onEditLayerChange(){
-  const layer=document.getElementById('ep-layer').value;
-  document.getElementById('ep-status-row').style.display  =layer==='existing'?'':'none';
-  document.getElementById('ep-newtype-row').style.display =layer==='new'?'':'none';
-}
-window.onEditLayerChange=onEditLayerChange;
 
-function pushHistory(){history.push(JSON.parse(JSON.stringify({segments,elevPoints})));if(history.length>40)history.shift();}
+// ── Finish pipe ────────────────────────────────────────
+function finishPipe(endNodeId){
+  if(drawPts.length<2){drawPts=[];drawStartNodeId=null;drawMarkers.forEach(m=>m.remove());drawMarkers=[];return;}
+  pushHistory();
+
+  const firstPt=drawPts[0],lastPt=drawPts[drawPts.length-1];
+  const waypoints=drawPts.slice(1,-1);
+
+  // Resolve start node
+  let startNode;
+  if(drawStartNodeId) startNode=nodes.find(n=>n.id===drawStartNodeId);
+  if(!startNode){const r=getOrCreateNode(firstPt[0],firstPt[1],null);startNode=r.node;}
+
+  // Resolve end node
+  let endNode;
+  if(endNodeId) endNode=nodes.find(n=>n.id===endNodeId);
+  if(!endNode){const r=getOrCreateNode(lastPt[0],lastPt[1],startNode.id);endNode=r.node;}
+
+  const layer=document.getElementById('sel-layer').value;
+  const pipe={
+    id:'p'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    label:'Pipe '+pipeCounter++,
+    startNodeId:startNode.id,endNodeId:endNode.id,
+    waypoints,
+    dia:document.getElementById('sel-dia').value,
+    layer,
+    condition:layer==='existing'?document.getElementById('sel-status').value:'good',
+    status:'good' // will be set below for new layer
+  };
+  if(layer==='new') pipe.status=classifyNewPipe(pipe);
+
+  pipes.push(pipe);
+  selectedPipeId=pipe.id;
+  drawPts=[];drawStartNodeId=null;drawMarkers.forEach(m=>m.remove());drawMarkers=[];
+
+  pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();updateSummary();
+}
+
+// ── Elevation point ────────────────────────────────────
+async function placeElevPoint(lat,lng){
+  const ep={id:'e'+Date.now(),lat,lng,elev:null,label:'P'+elevCounter++};
+  elevPts.push(ep);renderElevMarkers();
+  try{
+    const res=await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat.toFixed(6)},${lng.toFixed(6)}`);
+    const data=await res.json();
+    ep.elev=data.results[0].elevation;
+  }catch{
+    const m=prompt(`Auto-fetch failed. Enter elevation for ${ep.label} (metres):`);
+    ep.elev=m!==null&&m.trim()!==''?parseFloat(m):null;
+  }
+  renderElevMarkers();pushToFirebase();
+}
+
+// ── Selection ──────────────────────────────────────────
+function selectPipe(id){selectedPipeId=id;selectedNodeId=null;switchTab('pipes');renderPipeList();pipeLayer.redraw();}
+function selectNode(id){selectedNodeId=id;selectedPipeId=null;switchTab('nodes');renderNodeList();pipeLayer.redraw();}
+
+// ── Edit handlers ──────────────────────────────────────
+function onEpLayerChange(){
+  const l=document.getElementById('ep-layer').value;
+  document.getElementById('ep-cond-row').style.display=l==='existing'?'':'none';
+  document.getElementById('ep-newtype-row').style.display=l==='new'?'':'none';
+}
+window.onEpLayerChange=onEpLayerChange;
+
+function applyPipeEdit(){
+  const pipe=pipes.find(p=>p.id===selectedPipeId);if(!pipe)return;
+  pushHistory();
+  pipe.layer    =document.getElementById('ep-layer').value;
+  pipe.dia      =document.getElementById('ep-dia').value;
+  pipe.direction=document.getElementById('ep-dir').value;
+  pipe.valveState=document.getElementById('ep-valve').value;
+  pipe.isZoneMain=document.getElementById('ep-zone-main').value==='yes';
+  pipe.zoneAreaDunum=parseFloat(document.getElementById('ep-zone-area')?.value)||null;
+  pipe.treeSpacing  =parseFloat(document.getElementById('ep-zone-spacing')?.value)||7;
+  if(pipe.layer==='existing'){pipe.condition=document.getElementById('ep-cond').value;pipe.status='good';}
+  else{pipe.status=document.getElementById('ep-newtype').value;pipe.condition='good';}
+  pushToFirebase();pipeLayer.redraw();renderPipeList();updateSummary();
+}
+window.applyPipeEdit=applyPipeEdit;
+
+function calcZoneEstimate(){
+  const pipe=pipes.find(p=>p.id===selectedPipeId);if(!pipe)return;
+  const areaDunum=parseFloat(document.getElementById('ep-zone-area').value)||0;
+  const spacing  =parseFloat(document.getElementById('ep-zone-spacing').value)||7;
+  const emitters =parseFloat(document.getElementById('ep-zone-emitters').value)||2;
+  const lhr      =parseFloat(document.getElementById('ep-zone-lhr').value)||4;
+  if(!areaDunum){document.getElementById('ep-zone-result').textContent='Enter area first.';return;}
+  const areaM2   =areaDunum*1000; // 1 dunum = 1000 m²
+  const trees    =Math.round(areaM2/(spacing*spacing));
+  const totalLhr =trees*emitters*lhr;
+  const totalM3h =(totalLhr/1000).toFixed(2);
+  const laterals =Math.ceil(Math.sqrt(trees)); // approx rows
+  const submains =Math.ceil(areaDunum/5); // one submain per 5 dunums
+  const pipeLen  =pipeLenM(pipe);
+  const feederSpacing=submains>0?(pipeLen/submains).toFixed(0):'-';
+  document.getElementById('ep-zone-result').innerHTML=
+    `<b>${trees}</b> trees &nbsp;·&nbsp; <b>${laterals}</b> laterals (20mm)<br>`+
+    `<b>${submains}</b> submain offtakes (2″/3″) along this run<br>`+
+    `Feeder spacing: ~<b>${feederSpacing}m</b><br>`+
+    `Total flow demand: <b>${totalM3h} m³/hr</b> (<b>${totalLhr.toFixed(0)} L/hr</b>)`;
+}
+window.calcZoneEstimate=calcZoneEstimate;
+
+function deleteSelectedPipe(){
+  const idx=pipes.findIndex(p=>p.id===selectedPipeId);if(idx===-1)return;
+  pushHistory();pipes.splice(idx,1);selectedPipeId=null;
+  pushToFirebase();pipeLayer.redraw();renderPipeList();renderNodeMarkers();updateSummary();
+}
+window.deleteSelectedPipe=deleteSelectedPipe;
+
+function applyNodeEdit(){
+  const node=nodes.find(n=>n.id===selectedNodeId);if(!node)return;
+  pushHistory();
+  node.type =document.getElementById('nep-type').value;
+  node.label=document.getElementById('nep-label').value||node.label;
+  node.role =document.getElementById('nep-role')?.value||'primary';
+  node.coversNodeId=document.getElementById('nep-covers')?.value||null;
+  if(node.type==='well'){
+    node.pumpHead      =parseFloat(document.getElementById('nep-pump')?.value)||0;
+    node.pumpFlowM3h   =parseFloat(document.getElementById('nep-pumpflow')?.value)||10;
+    node.nominalDepth  =parseFloat(document.getElementById('nep-depth')?.value)||30;
+    node.drawdownFactor=parseFloat(document.getElementById('nep-drawdown')?.value)||0.15;
+  } else if(node.type==='tank'){
+    node.waterLevel=parseFloat(document.getElementById('nep-wl')?.value)||2;
+    node.pumpHead  =parseFloat(document.getElementById('nep-tankpump')?.value)||0;
+  } else if(node.type==='pump'){
+    node.pumpHead   =parseFloat(document.getElementById('nep-ps-head')?.value)||0;
+    node.pumpFlowM3h=parseFloat(document.getElementById('nep-ps-flow')?.value)||10;
+  }
+  pushToFirebase();renderNodeMarkers();renderNodeList();updateSummary();
+}
+window.applyNodeEdit=applyNodeEdit;
+
+function deleteSelectedNode(){
+  const idx=nodes.findIndex(n=>n.id===selectedNodeId);if(idx===-1)return;
+  if(!confirm('Delete node? Connected pipes will be orphaned.'))return;
+  pushHistory();nodes.splice(idx,1);selectedNodeId=null;
+  pushToFirebase();renderNodeMarkers();renderNodeList();pipeLayer.redraw();updateSummary();
+}
+window.deleteSelectedNode=deleteSelectedNode;
+
+function onNepTypeChange(){
+  const t=document.getElementById('nep-type').value;
+  document.getElementById('nep-well-fields').style.display      =t==='well'?'':'none';
+  document.getElementById('nep-tank-fields').style.display      =t==='tank'?'':'none';
+  document.getElementById('nep-pumpstation-fields').style.display=t==='pump'?'':'none';
+  const hasRole=['well','tank','pump'].includes(t);
+  document.getElementById('nep-role-row').style.display=hasRole?'':'none';
+  if(hasRole) onNepRoleChange();
+}
+function onNepRoleChange(){
+  const isStandby=document.getElementById('nep-role').value==='standby';
+  document.getElementById('nep-covers-row').style.display=isStandby?'':'none';
+  if(isStandby){
+    const sel=document.getElementById('nep-covers');
+    const primaries=nodes.filter(n=>n.role==='primary'&&['well','tank','pump'].includes(n.type)&&n.id!==selectedNodeId);
+    sel.innerHTML='<option value="">— select primary —</option>'+primaries.map(n=>`<option value="${n.id}">${n.label||n.type}</option>`).join('');
+  }
+}
+document.getElementById('nep-type').addEventListener('change',onNepTypeChange);
+document.getElementById('nep-role')?.addEventListener('change',onNepRoleChange);
+window.onNepTypeChange=onNepTypeChange;
+
+// ── Migration of old data model ────────────────────────
+function migrateSegments(){
+  // Check for old-format segments key in Firebase
+  const oldRef=ref(db,'projects/'+projectId+'/segments');
+  import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js').then(({get})=>{
+    get(oldRef).then(snap=>{
+      const old=snap.val();
+      if(!old){alert('No old segments found to migrate.');return;}
+      const segs=Array.isArray(old)?old:Object.values(old);
+      if(!segs.length){alert('No old segments found.');return;}
+      if(!confirm(`Migrate ${segs.length} old segments to node-edge model? Existing nodes/pipes will be kept.`))return;
+      pushHistory();
+      segs.forEach(seg=>{
+        if(!seg.latlngs||seg.latlngs.length<2)return;
+        const firstPt=seg.latlngs[0],lastPt=seg.latlngs[seg.latlngs.length-1];
+        const waypoints=seg.latlngs.slice(1,-1);
+        const {node:sn}=getOrCreateNode(firstPt[0],firstPt[1],null);
+        const {node:en}=getOrCreateNode(lastPt[0],lastPt[1],sn.id);
+        const isNew=seg.layer==='new';
+        const pipe={
+          id:'p'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+          label:seg.label||('Pipe '+pipeCounter++),
+          startNodeId:sn.id,endNodeId:en.id,
+          waypoints,
+          dia:seg.dia||'4',
+          layer:seg.layer||'existing',
+          condition:isNew?'good':(seg.status==='replace'?'replace':seg.status==='good'?'good':'fair'),
+          status:isNew?(seg.status||'required'):'good'
+        };
+        pipes.push(pipe);
+      });
+      pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();
+      alert(`Migrated ${segs.length} segments. Wells and tanks will appear as junctions — click them in Select mode to upgrade their type.`);
+    });
+  });
+}
+window.migrateSegments=migrateSegments;
+
+// ── History ────────────────────────────────────────────
+function pushHistory(){history.push(JSON.parse(JSON.stringify({nodes,pipes,elevPts,zones})));if(history.length>40)history.shift();}
 function undo(){
   if(!history.length)return;
-  const s=history.pop();segments=s.segments;elevPoints=s.elevPoints;
-  selectedId=null;currentPts=[];drawMarkers.forEach(m=>m.remove());drawMarkers=[];
-  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();renderElevMarkers();
+  const s=history.pop();nodes=s.nodes;pipes=s.pipes;elevPts=s.elevPts;zones=s.zones||[];
+  selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;drawPts=[];drawStartNodeId=null;
+  zonePts=[];zoneMarkers.forEach(m=>m.remove());zoneMarkers=[];
+  drawMarkers.forEach(m=>m.remove());drawMarkers=[];
+  pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();renderElevMarkers();renderZoneLayers();
 }
 function clearAll(){
-  if(!segments.length&&!currentPts.length&&!elevPoints.length)return;
-  if(!confirm('Clear all segments and elevation points for this project?'))return;
-  pushHistory();segments=[];elevPoints=[];selectedId=null;currentPts=[];
-  drawMarkers.forEach(m=>m.remove());drawMarkers=[];
-  document.getElementById('prox-banner').classList.remove('visible');
-  pushToFirebase();updateSummary();renderSegList();pipeLayer.redraw();renderElevMarkers();
+  if(!nodes.length&&!pipes.length&&!elevPts.length&&!zones.length)return;
+  if(!confirm('Clear all nodes, pipes, zones and elevation points?'))return;
+  pushHistory();nodes=[];pipes=[];elevPts=[];zones=[];selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;
+  pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();renderElevMarkers();renderZoneLayers();
 }
-window.undo=undo; window.clearAll=clearAll;
-window.applyEdit=applyEdit; window.deleteSelected=deleteSelected;
-window._deleteSeg=deleteSeg;
+window.undo=undo;window.clearAll=clearAll;
 
 // ── Firebase ───────────────────────────────────────────
 function setSyncStatus(s){
   const el=document.getElementById('sync-status');
-  if(s==='synced'){el.className='synced';el.textContent='&#9679; synced';}
-  else if(s==='syncing'){el.className='syncing';el.textContent='&#9679; syncing...';}
-  else{el.className='offline';el.textContent='&#9679; offline';}
+  if(s==='synced'){el.className='synced';el.textContent='● synced';}
+  else if(s==='syncing'){el.className='syncing';el.textContent='● syncing...';}
+  else{el.className='offline';el.textContent='● offline';}
 }
-function dbRef(){return ref(db,'projects/'+projectId+'/data');}
+function dbRef(){return ref(db,'projects/'+projectId+'/v2');}
 function pushToFirebase(){
-  setSyncStatus('syncing');
-  ignoreNext=true;
-  set(dbRef(),{segments:segments.length?segments:null, elevPoints:elevPoints.length?elevPoints:null})
-    .then(()=>{setSyncStatus('synced');document.getElementById('save-status').textContent='Saved '+new Date().toLocaleTimeString();})
-    .catch(()=>setSyncStatus('offline'));
+  setSyncStatus('syncing');ignoreNext=true;
+  set(dbRef(),{
+    nodes:nodes.length?nodes:null,
+    pipes:pipes.length?pipes:null,
+    elevPts:elevPts.length?elevPts:null,
+    zones:zones.length?zones:null
+  }).then(()=>{setSyncStatus('synced');document.getElementById('save-status').textContent='Saved '+new Date().toLocaleTimeString();})
+  .catch(()=>setSyncStatus('offline'));
 }
 function subscribeToProject(){
   if(fbUnsub){fbUnsub();fbUnsub=null;}
@@ -703,168 +1242,218 @@ function subscribeToProject(){
   fbUnsub=onValue(dbRef(),snap=>{
     if(ignoreNext){ignoreNext=false;return;}
     const d=snap.val();
-    segments   = d?.segments   ? (Array.isArray(d.segments)  ?d.segments  :Object.values(d.segments))  : [];
-    elevPoints = d?.elevPoints ? (Array.isArray(d.elevPoints)?d.elevPoints:Object.values(d.elevPoints)) : [];
-    segCounter=segments.length?segments.length+1:1;
-    elevCounter=elevPoints.length?elevPoints.length+1:1;
-    selectedId=null;
+    nodes  =d?.nodes  ?(Array.isArray(d.nodes)  ?d.nodes  :Object.values(d.nodes))  :[];
+    pipes  =d?.pipes  ?(Array.isArray(d.pipes)  ?d.pipes  :Object.values(d.pipes))  :[];
+    elevPts=d?.elevPts?(Array.isArray(d.elevPts)?d.elevPts:Object.values(d.elevPts)):[];
+    zones  =d?.zones  ?(Array.isArray(d.zones)  ?d.zones  :Object.values(d.zones))  :[];
+    nodeCounter=nodes.length+1;pipeCounter=pipes.length+1;elevCounter=elevPts.length+1;zoneCounter=zones.length+1;
+    selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;
     setSyncStatus('synced');
     document.getElementById('save-status').textContent='Live — '+new Date().toLocaleTimeString();
-    updateSummary();renderSegList();pipeLayer.redraw();renderElevMarkers();
+    renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();renderElevMarkers();renderZoneLayers();
   },()=>setSyncStatus('offline'));
 }
 function switchProject(){
   const val=document.getElementById('project-id').value.trim().replace(/[^a-zA-Z0-9_-]/g,'_');
   if(!val){alert('Enter a valid project name.');return;}
-  projectId=val;segments=[];elevPoints=[];selectedId=null;history=[];
-  updateSummary();renderSegList();pipeLayer.redraw();renderElevMarkers();
+  projectId=val;nodes=[];pipes=[];elevPts=[];zones=[];selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;history=[];
+  renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();renderElevMarkers();renderZoneLayers();
   subscribeToProject();
 }
 window.switchProject=switchProject;
 
-// ── Haversine ──────────────────────────────────────────
-function haversineM(a,b){
-  const R=6371000,dLat=(b[0]-a[0])*Math.PI/180,dLon=(b[1]-a[1])*Math.PI/180;
-  const x=Math.sin(dLat/2)**2+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
-}
-function segLenM(seg){
-  if(!seg.latlngs||seg.latlngs.length<2)return 0;
-  let t=0;for(let i=0;i<seg.latlngs.length-1;i++)t+=haversineM(seg.latlngs[i],seg.latlngs[i+1]);
-  return t;
-}
-
-// ── Summary ────────────────────────────────────────────
+// ── Summary / validation ───────────────────────────────
 function updateSummary(){
+  // Network stats
+  const nWells=nodes.filter(n=>n.type==='well').length;
+  const nTanks=nodes.filter(n=>n.type==='tank').length;
+  const nEP=nodes.filter(n=>n.type==='endpoint').length;
+  const nJ=nodes.filter(n=>n.type==='junction').length;
+  const nUnconn=nodes.filter(n=>isUnconnected(n)&&n.type!=='junction').length;
+  const nUndec=pipes.filter(p=>p.status==='undecided').length;
+
+  const stats=document.getElementById('net-stats');
+  stats.innerHTML=[
+    {l:'Wells / pumps',v:nWells},
+    {l:'Storage tanks',v:nTanks},
+    {l:'Endpoints',v:nEP},
+    {l:'Junctions',v:nJ},
+    {l:'Pipes',v:pipes.length},
+  ].map(r=>`<div class="net-row"><span class="nr-label">${r.l}</span><span class="nr-val">${r.v}</span></div>`).join('');
+
+  const vb=document.getElementById('net-validation');
+  const issues=[];
+  if(!nWells&&!nTanks) issues.push('No source nodes (wells or tanks) mapped');
+  if(nUnconn) issues.push(`${nUnconn} unconnected source/endpoint node(s) — shown in red`);
+  if(nUndec) issues.push(`${nUndec} pipe(s) need Update/New classification — select and edit`);
+  if(issues.length){
+    vb.className='val-banner val-warn visible';
+    vb.innerHTML='<strong>&#9888; Issues</strong><br>'+issues.map(i=>'&#9679; '+i).join('<br>');
+  } else if(pipes.length>0){
+    vb.className='val-banner val-ok visible';
+    vb.textContent='&#10003; Network looks valid';
+  } else {
+    vb.className='val-banner';
+  }
+
+  // Procurement
   const sizes=['5','4','3','2','20mm'],D={};
   sizes.forEach(s=>{D[s]={stock:0,required:0,update:0};});
-  segments.forEach(seg=>{
-    const l=segLenM(seg);
-    if(seg.layer==='existing'&&seg.status==='good')     D[seg.dia].stock    +=l;
-    if(seg.layer==='new'&&seg.status==='required')      D[seg.dia].required +=l;
-    if(seg.layer==='new'&&seg.status==='update')        D[seg.dia].update   +=l;
+  pipes.forEach(pipe=>{
+    const l=pipeLenM(pipe);
+    if(pipe.layer==='existing'&&pipe.condition!=='replace') D[pipe.dia].stock+=l;
+    if(pipe.layer==='new'&&pipe.status==='required')        D[pipe.dia].required+=l;
+    if(pipe.layer==='new'&&pipe.status==='update')          D[pipe.dia].update+=l;
   });
   const tbody=document.getElementById('sum-body');
   tbody.innerHTML='';
   let tS=0,tRq=0,tUp=0,tB=0;
   sizes.forEach(s=>{
-    const d=D[s];
-    if(d.stock===0&&d.required===0&&d.update===0)return;
+    const d=D[s];if(!d.stock&&!d.required&&!d.update)return;
     const buy=Math.max(0,d.required-d.stock);
     tS+=d.stock;tRq+=d.required;tUp+=d.update;tB+=buy;
     const tr=document.createElement('tr');
-    tr.innerHTML=
-      `<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PIPE_COLOR[s]};margin-right:4px;vertical-align:middle"></span>${s}</td>`+
+    tr.innerHTML=`<td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PIPE_COLOR[s]};margin-right:4px;vertical-align:middle"></span>${s}</td>`+
       `<td>${d.stock.toFixed(0)}</td><td>${d.required.toFixed(0)}</td><td>${d.update.toFixed(0)}</td>`+
       `<td class="${buy>0?'c-buy':'c-ok'}">${buy.toFixed(0)}</td>`;
     tbody.appendChild(tr);
   });
   document.getElementById('ft-stock').textContent=tS.toFixed(0);
-  document.getElementById('ft-req').textContent  =tRq.toFixed(0);
-  document.getElementById('ft-upd').textContent  =tUp.toFixed(0);
+  document.getElementById('ft-req').textContent=tRq.toFixed(0);
+  document.getElementById('ft-upd').textContent=tUp.toFixed(0);
   const ftB=document.getElementById('ft-buy');
   ftB.textContent=tB.toFixed(0)+' m';ftB.className=tB>0?'c-buy':'c-ok';
 
   // Stock balance
   const rb=document.getElementById('reuse-balance');rb.innerHTML='';
   sizes.forEach(s=>{
-    const d=D[s];if(d.stock===0&&d.required===0)return;
+    const d=D[s];if(!d.stock&&!d.required)return;
     const surplus=d.stock-d.required,sf=Math.max(0,-surplus);
     let badge='',cls='';
     if(sf>0){badge='buy '+sf.toFixed(0)+'m';cls='rb-warn';}
     else if(surplus>0.5){badge='surplus '+surplus.toFixed(0)+'m';cls='rb-surplus';}
     else{badge='exact';cls='rb-ok';}
     const row=document.createElement('div');row.className='rb-row';
-    row.innerHTML=
-      `<div class="rb-size"><div class="rb-dot" style="background:${PIPE_COLOR[s]}"></div>${s}</div>`+
+    row.innerHTML=`<div class="rb-size"><div class="rb-dot" style="background:${PIPE_COLOR[s]}"></div>${s}</div>`+
       `<div class="rb-nums"><span>stock ${d.stock.toFixed(0)}m</span><span>need ${d.required.toFixed(0)}m</span></div>`+
       `<span class="rb-status ${cls}">${badge}</span>`;
     rb.appendChild(row);
   });
-  if(!rb.children.length) rb.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Map both layers to see balance.</div>';
-
-  // Undecided count warning
-  const nUndecided=segments.filter(s=>s.status==='undecided').length;
-  if(nUndecided>0&&!pendingProxId){
-    document.getElementById('prox-banner-msg').textContent=`${nUndecided} segment(s) need review — click them in Segments tab.`;
-    document.getElementById('prox-banner').classList.add('visible');
-  } else if(!pendingProxId){
-    document.getElementById('prox-banner').classList.remove('visible');
-  }
+  if(!rb.children.length)rb.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Map both layers to see balance.</div>';
 }
 
-function updateElevSummary(){
-  const el=document.getElementById('elev-list-sum');
-  if(!elevPoints.length){el.textContent='No elevation points yet.';return;}
-  el.innerHTML=elevPoints.map(ep=>
-    `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
-      <span style="color:var(--text2)">${ep.label}</span>
-      <span style="color:${ep.elev!==null?'var(--accent)':'var(--text3)'}">${ep.elev!==null?ep.elev+' m asl':'pending'}</span>
-    </div>`
-  ).join('');
-}
-
-// ── Segment list ───────────────────────────────────────
-function renderSegList(){
+// ── Pipe list ──────────────────────────────────────────
+function renderPipeList(){
   const el=document.getElementById('seg-list');
-  if(!segments.length){
-    el.innerHTML='<div id="seg-empty">No segments yet.<br>Draw pipe to begin.</div>';
-    document.getElementById('edit-panel').classList.remove('visible');return;
-  }
+  if(!pipes.length){el.innerHTML='<div id="seg-empty">No pipes yet.<br>Use Pipe mode to draw.</div>';document.getElementById('edit-panel').classList.remove('visible');return;}
   el.innerHTML='';
-  segments.forEach((seg,i)=>{
-    const l=segLenM(seg);
-    const needsReview=seg.status==='undecided';
+  pipes.forEach((pipe,i)=>{
+    const l=pipeLenM(pipe),sn=nodes.find(n=>n.id===pipe.startNodeId),en=nodes.find(n=>n.id===pipe.endNodeId);
     const div=document.createElement('div');
-    div.className='seg-item'+(seg.id===selectedId?' sel':'')+(needsReview?' needs-review':'');
-    div.innerHTML=
-      `<div class="seg-dot" style="background:${PIPE_COLOR[seg.dia]}"></div>`+
-      `<div class="seg-body">`+
-        `<div class="seg-title">${seg.dia} &nbsp;<span class="seg-badge sb-${seg.status}">${seg.status}</span> <span style="font-size:9px;color:var(--text3)">${seg.layer}</span>${needsReview?' &#9888;':''}</div>`+
-        `<div class="seg-meta">${l.toFixed(0)} m</div>`+
+    div.className='list-item'+(pipe.id===selectedPipeId?' sel':'');
+    const badgeStatus=pipe.layer==='existing'?pipe.condition:pipe.status;
+    div.innerHTML=`<div class="item-icon" style="background:${PIPE_COLOR[pipe.dia]||'#888'};color:#fff;font-size:9px">${pipe.dia}</div>`+
+      `<div class="item-body">`+
+        `<div class="item-title">${pipe.label} <span class="seg-badge sb-${badgeStatus}">${badgeStatus}</span></div>`+
+        `<div class="item-meta">${l.toFixed(0)}m &nbsp;${sn?sn.label:'?'} → ${en?en.label:'?'}</div>`+
       `</div>`+
-      `<span class="seg-del" onclick="window._deleteSeg(${i},event)">&#215;</span>`;
-    div.onclick=()=>{selectedId=seg.id;renderSegList();pipeLayer.redraw();};
+      `<span class="item-del" onclick="window._delPipe(${i},event)">×</span>`;
+    div.onclick=()=>selectPipe(pipe.id);
     el.appendChild(div);
   });
-  const sel=segments.find(s=>s.id===selectedId);
+  const sel=pipes.find(p=>p.id===selectedPipeId);
   const ep=document.getElementById('edit-panel');
   if(sel){
     ep.classList.add('visible');
     document.getElementById('ep-layer').value=sel.layer;
-    document.getElementById('ep-dia').value  =sel.dia;
+    document.getElementById('ep-dia').value=sel.dia;
     const isNew=sel.layer==='new';
-    document.getElementById('ep-status-row').style.display =isNew?'none':'';
+    document.getElementById('ep-cond-row').style.display=isNew?'none':'';
     document.getElementById('ep-newtype-row').style.display=isNew?'':'none';
-    if(!isNew) document.getElementById('ep-status').value =sel.status;
-    else       document.getElementById('ep-newtype').value=sel.status;
+    if(!isNew)document.getElementById('ep-cond').value=sel.condition||'good';
+    else document.getElementById('ep-newtype').value=sel.status;
+    document.getElementById('ep-dir').value=sel.direction||'auto';
+    document.getElementById('ep-valve').value=sel.valveState||'open';
+    document.getElementById('ep-zone-main').value=sel.isZoneMain?'yes':'';
+    document.getElementById('ep-zone-fields').style.display=sel.isZoneMain?'':'none';
+    if(sel.zoneAreaDunum) document.getElementById('ep-zone-area').value=sel.zoneAreaDunum;
+    if(sel.treeSpacing)   document.getElementById('ep-zone-spacing').value=sel.treeSpacing;
+    document.getElementById('ep-zone-result').innerHTML='';
   } else ep.classList.remove('visible');
 }
+window._delPipe=(i,e)=>{e.stopPropagation();pushHistory();if(selectedPipeId===pipes[i].id)selectedPipeId=null;pipes.splice(i,1);pushToFirebase();pipeLayer.redraw();renderPipeList();renderNodeMarkers();updateSummary();};
 
-function switchTab(t){
-  ['summary','segments'].forEach(id=>{
-    document.getElementById('tab-'+id).classList.toggle('visible',id===t);
-    document.getElementById('tab-btn-'+id).classList.toggle('active',id===t);
+// ── Node list ──────────────────────────────────────────
+function renderNodeList(){
+  const el=document.getElementById('node-list');
+  if(!nodes.length){el.innerHTML='<div id="node-empty">No nodes yet.<br>Use Node mode or draw a pipe.</div>';document.getElementById('node-edit-panel').style.display='none';return;}
+  el.innerHTML='';
+  nodes.forEach((node,i)=>{
+    const unconn=isUnconnected(node);
+    const connPipes=pipes.filter(p=>p.startNodeId===node.id||p.endNodeId===node.id).length;
+    const roleTag=node.role==='standby'?' <span style="font-size:9px;color:var(--warn)">[standby]</span>':'';
+    const div=document.createElement('div');
+    div.className='list-item'+(node.id===selectedNodeId?' sel':'')+(unconn?' unconnected':'');
+    div.innerHTML=`<div class="item-icon" style="background:${NODE_COLOR[node.type]||'#888'};color:#fff">${NODE_LABEL[node.type]||'?'}</div>`+
+      `<div class="item-body">`+
+        `<div class="item-title">${node.label||node.type}${unconn?' ⚠':''}${node.elev!==null&&node.elev!==undefined?' '+node.elev+'m':''}${roleTag}</div>`+
+        `<div class="item-meta">${node.type} · ${connPipes} pipe(s)</div>`+
+      `</div>`+
+      `<span class="item-del" onclick="window._delNode(${i},event)">×</span>`;
+    div.onclick=()=>selectNode(node.id);
+    el.appendChild(div);
   });
+  const sel=nodes.find(n=>n.id===selectedNodeId);
+  const nep=document.getElementById('node-edit-panel');
+  if(sel){
+    nep.style.display='block';
+    document.getElementById('nep-type').value =sel.type;
+    document.getElementById('nep-label').value=sel.label||'';
+    // Well
+    if(document.getElementById('nep-pump'))     document.getElementById('nep-pump').value    =sel.pumpHead||0;
+    if(document.getElementById('nep-pumpflow')) document.getElementById('nep-pumpflow').value=sel.pumpFlowM3h||10;
+    if(document.getElementById('nep-depth'))    document.getElementById('nep-depth').value   =sel.nominalDepth||30;
+    if(document.getElementById('nep-drawdown')) document.getElementById('nep-drawdown').value=sel.drawdownFactor||0.15;
+    // Tank
+    if(document.getElementById('nep-wl'))       document.getElementById('nep-wl').value      =sel.waterLevel||2;
+    if(document.getElementById('nep-tankpump')) document.getElementById('nep-tankpump').value=sel.pumpHead||0;
+    // Pump station
+    if(document.getElementById('nep-ps-head'))  document.getElementById('nep-ps-head').value =sel.pumpHead||0;
+    if(document.getElementById('nep-ps-flow'))  document.getElementById('nep-ps-flow').value =sel.pumpFlowM3h||10;
+    // Role
+    if(document.getElementById('nep-role'))     document.getElementById('nep-role').value    =sel.role||'primary';
+    onNepTypeChange();
+    if(sel.coversNodeId&&document.getElementById('nep-covers')){
+      document.getElementById('nep-covers').value=sel.coversNodeId;
+    }
+  } else nep.style.display='none';
 }
-window.switchTab=switchTab;
+window._delNode=(i,e)=>{e.stopPropagation();if(!confirm('Delete node?'))return;pushHistory();if(selectedNodeId===nodes[i].id)selectedNodeId=null;nodes.splice(i,1);pushToFirebase();renderNodeMarkers();renderNodeList();pipeLayer.redraw();updateSummary();};
+
+// switchTab defined in hydraulics section above
+
 
 // ── Export CSV ─────────────────────────────────────────
 function exportCSV(){
-  if(!segments.length&&!elevPoints.length){alert('Nothing to export.');return;}
-  const rows=['Segment,Layer,Diameter,Status,Length (m)'];
-  segments.forEach((seg,i)=>rows.push([`Seg ${i+1}`,seg.layer,seg.dia,seg.status,segLenM(seg).toFixed(2)].join(',')));
+  if(!pipes.length&&!nodes.length){alert('Nothing to export.');return;}
+  const rows=['Pipes','ID,Label,Layer,Diameter,Condition/Status,Start Node,End Node,Length (m)'];
+  pipes.forEach(pipe=>{
+    const sn=nodes.find(n=>n.id===pipe.startNodeId),en=nodes.find(n=>n.id===pipe.endNodeId);
+    rows.push([pipe.id,pipe.label,pipe.layer,pipe.dia,pipe.layer==='existing'?pipe.condition:pipe.status,sn?sn.label:'?',en?en.label:'?',pipeLenM(pipe).toFixed(2)].join(','));
+  });
+  rows.push('','Nodes','ID,Label,Type,Lat,Lng,Elev (m),PumpHead (m),WaterLevel (m)');
+  nodes.forEach(n=>rows.push([n.id,n.label,n.type,n.lat.toFixed(6),n.lng.toFixed(6),n.elev??'',n.pumpHead??0,n.waterLevel??''].join(',')));
   rows.push('','Procurement','Size,Stock (m),Required (m),Update (m),Buy (m)');
   ['5','4','3','2','20mm'].forEach(s=>{
-    const stock =segments.filter(g=>g.layer==='existing'&&g.dia===s&&g.status==='good'    ).reduce((a,g)=>a+segLenM(g),0);
-    const req   =segments.filter(g=>g.layer==='new'     &&g.dia===s&&g.status==='required').reduce((a,g)=>a+segLenM(g),0);
-    const upd   =segments.filter(g=>g.layer==='new'     &&g.dia===s&&g.status==='update'  ).reduce((a,g)=>a+segLenM(g),0);
-    if(stock===0&&req===0&&upd===0)return;
+    const stock=pipes.filter(p=>p.layer==='existing'&&p.dia===s&&p.condition!=='replace').reduce((a,p)=>a+pipeLenM(p),0);
+    const req  =pipes.filter(p=>p.layer==='new'&&p.dia===s&&p.status==='required').reduce((a,p)=>a+pipeLenM(p),0);
+    const upd  =pipes.filter(p=>p.layer==='new'&&p.dia===s&&p.status==='update').reduce((a,p)=>a+pipeLenM(p),0);
+    if(!stock&&!req&&!upd)return;
     rows.push([s,stock.toFixed(2),req.toFixed(2),upd.toFixed(2),Math.max(0,req-stock).toFixed(2)].join(','));
   });
-  if(elevPoints.length){
-    rows.push('','Elevation points','Label,Lat,Lng,Elevation (m asl)');
-    elevPoints.forEach(ep=>rows.push([ep.label,ep.lat.toFixed(6),ep.lng.toFixed(6),ep.elev!==null?ep.elev:'unknown'].join(',')));
+  if(elevPts.length){
+    rows.push('','Elevation points','Label,Lat,Lng,Elev (m asl)');
+    elevPts.forEach(ep=>rows.push([ep.label,ep.lat.toFixed(6),ep.lng.toFixed(6),ep.elev??''].join(',')));
   }
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
@@ -872,11 +1461,567 @@ function exportCSV(){
 }
 window.exportCSV=exportCSV;
 
-// ── Init ───────────────────────────────────────────────
+// ── Tab (updated to include hydraulics) ───────────────
+function switchTab(t){
+  ['summary','pipes','nodes','zones','hydraulics'].forEach(id=>{
+    const pane=document.getElementById('tab-'+id);
+    const btn=document.getElementById('tab-btn-'+id);
+    if(pane) pane.classList.toggle('visible',id===t);
+    if(btn)  btn.classList.toggle('active',id===t);
+  });
+  if(t==='hydraulics') renderHydraulicsInputs();
+  if(t==='zones') renderZoneList();
+}
+window.switchTab=switchTab;
+
+// ── Hydraulics engine (redundancy-aware) ──────────────
+const hydPipeParams={};
+const hydSrcParams={};
+
+const HW_C={
+  'pvc-new':140,'pvc-old':100,'pvc-veryold':70,
+  'hdpe':150,'steel-new':120,'steel-old':80,'unknown':80
+};
+const PIPE_DIA_M={'5':0.127,'4':0.102,'3':0.076,'2':0.051,'20mm':0.020};
+
+function renderHydraulicsInputs(){
+  const srcEl=document.getElementById('hyd-sources-inputs');
+  const srcNodes=nodes.filter(n=>['well','tank','pump'].includes(n.type));
+  if(!srcNodes.length){
+    srcEl.innerHTML='<div style="font-size:11px;color:var(--text3)">No source nodes mapped yet.</div>';
+  } else {
+    srcEl.innerHTML='';
+    srcNodes.forEach(node=>{
+      const p=hydSrcParams[node.id]||{};
+      const div=document.createElement('div');
+      div.className='hyd-src-input';
+      const roleTag=node.role==='standby'?' <span style="color:var(--warn);font-size:10px">[standby]</span>':'';
+      let fields='';
+      if(node.type==='well'){
+        fields=`
+          <div class="si-row"><label>Pump head (m)</label><input type="number" id="hs-ph-${node.id}" value="${p.pumpHead??node.pumpHead??40}" min="0" step="1"></div>
+          <div class="si-row"><label>Pump flow (m³/hr)</label><input type="number" id="hs-pf-${node.id}" value="${p.pumpFlowM3h??node.pumpFlowM3h??10}" min="0.1" step="0.5"></div>
+          <div class="si-row"><label>Nominal depth (m)</label><input type="number" id="hs-nd-${node.id}" value="${p.nominalDepth??node.nominalDepth??30}" min="1" step="1"></div>
+          <div class="si-row"><label>Drawdown factor</label><input type="number" id="hs-df-${node.id}" value="${p.drawdownFactor??node.drawdownFactor??0.15}" min="0" max="0.5" step="0.01" title="Fraction of nominal depth lost to drawdown (default 0.15)"></div>`;
+      } else if(node.type==='tank'){
+        fields=`
+          <div class="si-row"><label>Water level (m)</label><input type="number" id="hs-wl-${node.id}" value="${p.waterLevel??node.waterLevel??2}" min="0" step="0.1"></div>
+          <div class="si-row"><label>Booster head (m)</label><input type="number" id="hs-ph-${node.id}" value="${p.pumpHead??node.pumpHead??0}" min="0" step="1"></div>`;
+      } else if(node.type==='pump'){
+        fields=`
+          <div class="si-row"><label>Pump head (m)</label><input type="number" id="hs-ph-${node.id}" value="${p.pumpHead??node.pumpHead??20}" min="0" step="1"></div>
+          <div class="si-row"><label>Pump flow (m³/hr)</label><input type="number" id="hs-pf-${node.id}" value="${p.pumpFlowM3h??node.pumpFlowM3h??8}" min="0.1" step="0.5"></div>`;
+      }
+      div.innerHTML=`<div class="si-title"><span style="color:${NODE_COLOR[node.type]};font-weight:700">${NODE_LABEL[node.type]}</span> ${node.label||node.type}${roleTag}</div>${fields}`;
+      srcEl.appendChild(div);
+    });
+  }
+
+  const pipeEl=document.getElementById('hyd-pipe-inputs');
+  const newPipes=pipes.filter(p=>p.layer==='new');
+  if(!newPipes.length){
+    pipeEl.innerHTML='<div style="font-size:11px;color:var(--text3)">No new-layout pipes yet.</div>';
+  } else {
+    pipeEl.innerHTML='';
+    newPipes.forEach(pipe=>{
+      const p=hydPipeParams[pipe.id]||{};
+      const sn=nodes.find(n=>n.id===pipe.startNodeId),en=nodes.find(n=>n.id===pipe.endNodeId);
+      const div=document.createElement('div');
+      div.className='hyd-pipe-input';
+      div.innerHTML=`<div class="pi-title">${pipe.label} <span style="color:var(--text3);font-size:10px">${sn?sn.label:'?'}→${en?en.label:'?'} · ${pipeLenM(pipe).toFixed(0)}m · ${pipe.dia}</span></div>`+
+        `<div class="pi-row"><label>Flow (m³/hr)</label><input type="number" id="hp-fl-${pipe.id}" value="${p.flowM3h??2}" min="0.01" step="0.1"></div>`+
+        `<div class="pi-row"><label>Material</label>
+          <select id="hp-mat-${pipe.id}">
+            <option value="pvc-new"    ${(p.material||'pvc-new')==='pvc-new'?'selected':''}>PVC new (C=140)</option>
+            <option value="pvc-old"    ${p.material==='pvc-old'?'selected':''}>PVC old (C=100)</option>
+            <option value="pvc-veryold"${p.material==='pvc-veryold'?'selected':''}>PVC very old (C=70)</option>
+            <option value="hdpe"       ${p.material==='hdpe'?'selected':''}>HDPE (C=150)</option>
+            <option value="steel-new"  ${p.material==='steel-new'?'selected':''}>Steel new (C=120)</option>
+            <option value="steel-old"  ${p.material==='steel-old'?'selected':''}>Steel old (C=80)</option>
+            <option value="unknown"    ${p.material==='unknown'?'selected':''}>Unknown/poor (C=80)</option>
+          </select></div>`+
+        `<div class="pi-row"><label>Service factor</label>
+          <select id="hp-sf-${pipe.id}" title="1.0=new, 0.7=typical farm, 0.5=poor">
+            <option value="1.0" ${(p.sf||0.7)===1.0?'selected':''}>1.0 — new/textbook</option>
+            <option value="0.8" ${p.sf===0.8?'selected':''}>0.8 — good farm</option>
+            <option value="0.7" ${p.sf===0.7?'selected':''}>0.7 — typical farm</option>
+            <option value="0.5" ${p.sf===0.5?'selected':''}>0.5 — poor quality</option>
+            <option value="0.35"${p.sf===0.35?'selected':''}>0.35 — very poor</option>
+          </select></div>`;
+      pipeEl.appendChild(div);
+    });
+  }
+}
+
+function collectHydParams(){
+  nodes.filter(n=>['well','tank','pump'].includes(n.type)).forEach(node=>{
+    const p={};
+    if(node.type==='well'){
+      p.pumpHead      =parseFloat(document.getElementById('hs-ph-'+node.id)?.value)||40;
+      p.pumpFlowM3h   =parseFloat(document.getElementById('hs-pf-'+node.id)?.value)||10;
+      p.nominalDepth  =parseFloat(document.getElementById('hs-nd-'+node.id)?.value)||30;
+      p.drawdownFactor=parseFloat(document.getElementById('hs-df-'+node.id)?.value)||0.15;
+    } else if(node.type==='tank'){
+      p.waterLevel=parseFloat(document.getElementById('hs-wl-'+node.id)?.value)||2;
+      p.pumpHead  =parseFloat(document.getElementById('hs-ph-'+node.id)?.value)||0;
+    } else if(node.type==='pump'){
+      p.pumpHead   =parseFloat(document.getElementById('hs-ph-'+node.id)?.value)||20;
+      p.pumpFlowM3h=parseFloat(document.getElementById('hs-pf-'+node.id)?.value)||8;
+    }
+    hydSrcParams[node.id]=p;
+  });
+  pipes.filter(p=>p.layer==='new').forEach(pipe=>{
+    hydPipeParams[pipe.id]={
+      flowM3h :parseFloat(document.getElementById('hp-fl-'+pipe.id)?.value)||2,
+      material:document.getElementById('hp-mat-'+pipe.id)?.value||'unknown',
+      sf      :parseFloat(document.getElementById('hp-sf-'+pipe.id)?.value)||0.7
+    };
+  });
+}
+
+function hwHeadLoss(Q_m3s,D_m,L_m,C,sf){
+  if(Q_m3s<=0||D_m<=0||L_m<=0)return 0;
+  return 10.67*L_m*Math.pow(Q_m3s,1.852)/(Math.pow(C*sf,1.852)*Math.pow(D_m,4.87));
+}
+function transitionLoss(Q_m3s,D_small_m,expand){
+  if(!D_small_m||D_small_m<=0)return 0;
+  const v=Q_m3s/(Math.PI*(D_small_m/2)**2);
+  return (expand?1.0:0.5)*v*v/(2*9.81);
+}
+
+function sourceAvailableHead(node){
+  const p=hydSrcParams[node.id]||{};
+  const elev=node.elev||0;
+  if(node.type==='well'){
+    const drawdown=(p.nominalDepth||30)*(p.drawdownFactor||0.15);
+    return elev-(p.nominalDepth||30)-drawdown+(p.pumpHead||0);
+  } else if(node.type==='tank'){
+    return elev+(p.waterLevel||2)+(p.pumpHead||0);
+  } else if(node.type==='pump'){
+    return null; // pump stations add head mid-network, not a starting point
+  }
+  return null;
+}
+
+// Core solver — given a set of active source node IDs, propagate head through new-layout pipes
+function solveNetwork(activeSourceIds){
+  const newPipes=pipes.filter(p=>p.layer==='new');
+  // Build adjacency
+  const adj={};
+  newPipes.forEach(pipe=>{
+    [pipe.startNodeId,pipe.endNodeId].forEach(nid=>{if(!adj[nid])adj[nid]=[];});
+    adj[pipe.startNodeId].push({pipe,neighbourId:pipe.endNodeId});
+    adj[pipe.endNodeId].push({pipe,neighbourId:pipe.startNodeId});
+  });
+
+  const nodeHeads={};
+  const pipeLosses={};
+
+  // Seed sources
+  activeSourceIds.forEach(srcId=>{
+    const node=nodes.find(n=>n.id===srcId);
+    if(!node)return;
+    const h=sourceAvailableHead(node);
+    if(h!==null) nodeHeads[srcId]=h;
+  });
+
+  // Dijkstra-style propagation (highest head first)
+  const visited=new Set();
+  const queue=Object.entries(nodeHeads).map(([nid,h])=>({nodeId:nid,head:h,prevDia:null}));
+
+  while(queue.length){
+    queue.sort((a,b)=>b.head-a.head);
+    const {nodeId,head,prevDia}=queue.shift();
+    if(visited.has(nodeId))continue;
+    visited.add(nodeId);
+    if(nodeHeads[nodeId]===undefined||head>nodeHeads[nodeId]) nodeHeads[nodeId]=head;
+
+    const curNode=nodes.find(n=>n.id===nodeId);
+    const curElev=curNode?.elev||0;
+
+    // If this is a pump station node, add pump head before continuing
+    let outHead=head;
+    if(curNode?.type==='pump'&&!activeSourceIds.includes(nodeId)){
+      const pp=hydSrcParams[nodeId]||{};
+      outHead=head+(pp.pumpHead||0);
+      nodeHeads[nodeId]=outHead;
+    }
+
+    (adj[nodeId]||[]).forEach(({pipe,neighbourId})=>{
+      if(visited.has(neighbourId))return;
+      // Respect closed valves
+      if(pipe.valveState==='closed')return;
+      const valveFactor=pipe.valveState==='partial'?(pipe.valvePercent||50)/100:1;
+      const nb=nodes.find(n=>n.id===neighbourId);
+      const nbElev=nb?.elev||0;
+      const pp=hydPipeParams[pipe.id]||{flowM3h:2,material:'unknown',sf:0.7};
+      const Q=(pp.flowM3h/3600)*valveFactor;
+      const D=PIPE_DIA_M[pipe.dia]||0.051;
+      const C=HW_C[pp.material]||80;
+      const L=pipeLenM(pipe);
+      const friction=hwHeadLoss(Q,D,L,C,pp.sf);
+      let trans=0;
+      if(prevDia&&prevDia!==pipe.dia){
+        const D_prev=PIPE_DIA_M[prevDia]||D;
+        trans=transitionLoss(Q,D>D_prev?D_prev:D,D>D_prev);
+      }
+      const elevDelta=nbElev-curElev;
+      const arrival=outHead-friction-trans-elevDelta;
+      if(!pipeLosses[pipe.id]) pipeLosses[pipe.id]={friction,transition:trans,elevChange:elevDelta};
+      if(nodeHeads[neighbourId]===undefined||arrival>nodeHeads[neighbourId]){
+        nodeHeads[neighbourId]=arrival;
+        queue.push({nodeId:neighbourId,head:arrival,prevDia:pipe.dia});
+      }
+    });
+  }
+  return {nodeHeads,pipeLosses};
+}
+
+function headClass(h){
+  if(h===undefined||h===null)return 'p-black';
+  if(h>10)return 'p-green'; if(h>5)return 'p-yellow';
+  if(h>1)return 'p-orange'; if(h>0)return 'p-red';
+  return 'p-black';
+}
+function headLabel(h){
+  if(h===undefined||h===null)return 'not reached';
+  if(h>10)return '✓ Good'; if(h>5)return '~ Marginal';
+  if(h>1)return '↓ Low'; if(h>0)return '⚠ Critical';
+  return '✗ Needs pump';
+}
+
+function runHydraulics(){
+  collectHydParams();
+  const newPipes=pipes.filter(p=>p.layer==='new');
+  if(!newPipes.length){alert('No new-layout pipes to analyse.');return;}
+
+  const srcNodes=nodes.filter(n=>['well','tank'].includes(n.type));
+  if(!srcNodes.length){alert('No source nodes (wells or tanks) found.');return;}
+
+  // ── Normal operation: all primary sources active ──
+  const primarySrcs=srcNodes.filter(n=>n.role!=='standby').map(n=>n.id);
+  const {nodeHeads:normalHeads,pipeLosses}=solveNetwork(primarySrcs.length?primarySrcs:srcNodes.map(n=>n.id));
+  lastHydHeads=normalHeads;
+
+  // ── Render normal results ──
+  const newNodeIds=new Set();
+  newPipes.forEach(p=>{newNodeIds.add(p.startNodeId);newNodeIds.add(p.endNodeId);});
+  const sortedNodes=[...newNodeIds].map(nid=>nodes.find(n=>n.id===nid)).filter(Boolean)
+    .sort((a,b)=>(normalHeads[b.id]??-999)-(normalHeads[a.id]??-999));
+
+  const nodeResEl=document.getElementById('hyd-node-results');
+  nodeResEl.innerHTML='';
+  sortedNodes.forEach(node=>{
+    const h=normalHeads[node.id];
+    const div=document.createElement('div');
+    div.className='hyd-node-row';
+    div.innerHTML=`<div class="hn-label"><span style="color:${NODE_COLOR[node.type]||'#aaa'};font-weight:700">${NODE_LABEL[node.type]||'?'}</span>&nbsp;${node.label||node.id}</div>`+
+      `<div class="hn-val ${headClass(h)}">${h!==undefined?h.toFixed(1)+'m':'—'} <span style="font-size:10px">${headLabel(h)}</span></div>`;
+    nodeResEl.appendChild(div);
+  });
+
+  // ── Redundancy scenarios ──
+  const redEl=document.getElementById('hyd-redundancy-results');
+  redEl.innerHTML='';
+  const failScenarios=srcNodes.filter(n=>n.role!=='standby');
+
+  if(failScenarios.length>1){
+    failScenarios.forEach(failedSrc=>{
+      // Find standby that covers this source
+      const standby=nodes.find(n=>n.role==='standby'&&n.coversNodeId===failedSrc.id);
+      const activeSrcs=srcNodes
+        .filter(n=>n.id!==failedSrc.id)
+        .map(n=>n.id);
+      if(standby) activeSrcs.push(standby.id);
+      const {nodeHeads:failHeads}=solveNetwork(activeSrcs);
+
+      const minH=Math.min(...[...newNodeIds].map(nid=>failHeads[nid]??Infinity).filter(h=>isFinite(h)));
+      const failCount=[...newNodeIds].filter(nid=>(failHeads[nid]??-1)<1).length;
+      const cls=minH>5?'c-ok':minH>1?'c-warn':'c-buy';
+
+      const row=document.createElement('div');
+      row.className='hyd-node-row';
+      row.style.marginBottom='3px';
+      row.innerHTML=`<div class="hn-label" style="font-size:10px">${failedSrc.label||failedSrc.id} fails${standby?' → '+standby.label+' activates':' (no standby)'}</div>`+
+        `<div class="hn-val ${cls}" style="font-size:10px">${isFinite(minH)?'min '+minH.toFixed(1)+'m':'n/a'} · ${failCount} node(s) critical</div>`;
+      redEl.appendChild(row);
+    });
+  } else {
+    redEl.innerHTML='<div style="font-size:11px;color:var(--text3)">Add multiple source nodes to see redundancy scenarios.</div>';
+  }
+
+  // ── Pipe losses ──
+  const pipeResEl=document.getElementById('hyd-pipe-results');
+  pipeResEl.innerHTML='';
+  newPipes.forEach(pipe=>{
+    const pl=pipeLosses[pipe.id];if(!pl)return;
+    const total=pl.friction+pl.transition;
+    const div=document.createElement('div');
+    div.className='hyd-pipe-row';
+    div.innerHTML=`<div><div style="font-weight:500;color:var(--text)">${pipe.label}</div>`+
+      `<div class="hp-label">friction ${pl.friction.toFixed(2)}m · trans ${pl.transition.toFixed(2)}m · elev Δ${pl.elevChange?.toFixed(1)||'?'}m</div></div>`+
+      `<div style="font-weight:600;color:${total>5?'#f87171':'#4ade80'}">${total.toFixed(2)}m</div>`;
+    pipeResEl.appendChild(div);
+  });
+
+  // ── Warnings ──
+  const warnings=[];
+  newNodeIds.forEach(nid=>{
+    const node=nodes.find(n=>n.id===nid);if(!node)return;
+    const h=normalHeads[nid];
+    if(h===undefined) warnings.push(`${node.label||nid}: not reached by any source`);
+    else if(h<=0) warnings.push(`${node.label||nid}: no pressure (${h.toFixed(1)}m) — add booster pump`);
+    else if(h<3) warnings.push(`${node.label||nid}: very low head (${h.toFixed(1)}m)`);
+  });
+  newPipes.forEach(pipe=>{
+    const pp=hydPipeParams[pipe.id]||{};
+    const Q=(pp.flowM3h||2)/3600;
+    const D=PIPE_DIA_M[pipe.dia]||0.051;
+    const v=Q/(Math.PI*(D/2)**2);
+    if(v>3) warnings.push(`${pipe.label}: velocity ${v.toFixed(1)} m/s — too high, upsize pipe`);
+    if(v<0.3) warnings.push(`${pipe.label}: velocity ${v.toFixed(1)} m/s — too low, sediment risk`);
+  });
+  const warnEl=document.getElementById('hyd-warnings');
+  warnEl.innerHTML=warnings.length
+    ?warnings.map(w=>`<div style="font-size:11px;color:var(--warn);padding:3px 0;border-bottom:1px solid var(--border)">⚠ ${w}</div>`).join('')
+    :'<div style="font-size:11px;color:var(--accent)">✓ No warnings</div>';
+
+  document.getElementById('hyd-results-section').style.display='';
+  document.getElementById('hyd-redundancy-section').style.display='';
+  document.getElementById('hyd-pipe-results-section').style.display='';
+  document.getElementById('hyd-warnings-section').style.display='';
+
+  renderNodeMarkersWithPressure(normalHeads);
+}
+window.runHydraulics=runHydraulics;
+
+function pressureColor(h){
+  if(h>10)return '#22c55e'; if(h>5)return '#fbbf24';
+  if(h>1)return '#fb923c';  if(h>0)return '#f87171';
+  return '#374151';
+}
+
+function renderNodeMarkersWithPressure(nodeHeads){
+  Object.values(nodeLeafletMarkers).forEach(m=>m.remove());
+  for(const k in nodeLeafletMarkers)delete nodeLeafletMarkers[k];
+  if(!layerVisible.nodes)return;
+  nodes.forEach(node=>{
+    const unconnected=isUnconnected(node);
+    const h=nodeHeads?nodeHeads[node.id]:undefined;
+    const col=unconnected?'#f87171':(h!==undefined?pressureColor(h):NODE_COLOR[node.type]||'#aaa');
+    const lbl=NODE_LABEL[node.type]||'?';
+    const icon=L.divIcon({
+      html:`<div style="width:22px;height:22px;background:${col};border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin:-11px 0 0 -11px;box-shadow:0 1px 4px #0006">${lbl}</div>`,
+      className:'',iconSize:[22,22]
+    });
+    const tooltip=h!==undefined?`${node.label}: ${h.toFixed(1)}m head`:(node.label||node.type);
+    const mk=L.marker([node.lat,node.lng],{icon,zIndexOffset:1000})
+      .bindTooltip(tooltip,{permanent:false,direction:'top',offset:[0,-13]})
+      .addTo(map);
+    mk.on('click',e=>{
+      L.DomEvent.stopPropagation(e);
+      if(mode==='pipe') handleNodeClickWhileDrawing(node);
+      else if(mode==='select') selectNode(node.id);
+    });
+    nodeLeafletMarkers[node.id]=mk;
+  });
+}
+
+
+// ── Zone engine ────────────────────────────────────────
+
+const ZONE_COLORS=['#fbbf24','#34d399','#60a5fa','#f87171','#c084fc','#fb923c','#a3e635'];
+
+function pointInPolygon(pt,polygon){
+  let inside=false;
+  const x=pt[1],y=pt[0];
+  for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
+    const xi=polygon[i][1],yi=polygon[i][0];
+    const xj=polygon[j][1],yj=polygon[j][0];
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
+
+function polygonAreaM2(polygon){
+  if(polygon.length<3)return 0;
+  const R=6371000;let area=0;
+  for(let i=0;i<polygon.length;i++){
+    const j=(i+1)%polygon.length;
+    const lat1=polygon[i][0]*Math.PI/180,lat2=polygon[j][0]*Math.PI/180;
+    const lon1=polygon[i][1]*Math.PI/180,lon2=polygon[j][1]*Math.PI/180;
+    area+=lon1*Math.sin(lat2)-lon2*Math.sin(lat1);
+  }
+  return Math.abs(area/2)*R*R;
+}
+
+function pipeMidpoint(pipe){
+  const sn=nodes.find(n=>n.id===pipe.startNodeId);
+  const en=nodes.find(n=>n.id===pipe.endNodeId);
+  if(!sn||!en)return null;
+  const allPts=[[sn.lat,sn.lng],...(pipe.waypoints||[]),[en.lat,en.lng]];
+  return allPts[Math.floor((allPts.length-1)/2)];
+}
+
+function pipesInZone(zone){
+  return pipes.filter(pipe=>{
+    const mid=pipeMidpoint(pipe);
+    return mid?pointInPolygon(mid,zone.polygon):false;
+  });
+}
+
+let ghostPolyline=null;
+function renderZoneGhost(){
+  if(ghostPolyline){ghostPolyline.remove();ghostPolyline=null;}
+  if(zonePts.length<2)return;
+  ghostPolyline=L.polyline([...zonePts,zonePts[0]],{color:'#fbbf24',weight:2,dashArray:'5,4',opacity:0.8}).addTo(map);
+}
+
+function finishZone(){
+  if(zonePts.length<3){
+    zonePts=[];zoneMarkers.forEach(m=>m.remove());zoneMarkers=[];
+    if(ghostPolyline){ghostPolyline.remove();ghostPolyline=null;}return;
+  }
+  pushHistory();
+  const zone={
+    id:'z'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    label:'Zone '+zoneCounter++,
+    polygon:[...zonePts],
+    color:ZONE_COLORS[zones.length%ZONE_COLORS.length],
+    treeSpacing:7,emittersPerTree:2,lhrPerEmitter:4
+  };
+  zones.push(zone);
+  selectedZoneId=zone.id;
+  zonePts=[];zoneMarkers.forEach(m=>m.remove());zoneMarkers=[];
+  if(ghostPolyline){ghostPolyline.remove();ghostPolyline=null;}
+  pushToFirebase();renderZoneLayers();renderZoneList();switchTab('zones');
+}
+
+function renderZoneLayers(){
+  Object.values(zoneLeafletLayers).forEach(l=>l.remove());
+  for(const k in zoneLeafletLayers)delete zoneLeafletLayers[k];
+  if(!layerVisible.zones)return;
+  zones.forEach(zone=>{
+    const isSel=zone.id===selectedZoneId;
+    const poly=L.polygon(zone.polygon,{
+      color:zone.color,weight:isSel?2.5:1.5,
+      fillColor:zone.color,fillOpacity:isSel?0.2:0.1,
+      dashArray:isSel?null:'4,4'
+    }).addTo(map);
+    const areaM2=polygonAreaM2(zone.polygon);
+    poly.bindTooltip(`${zone.label} · ${(areaM2/1000).toFixed(1)} dunum`,{permanent:true,direction:'center',opacity:0.85});
+    poly.on('click',e=>{L.DomEvent.stopPropagation(e);if(mode==='select'){selectedZoneId=zone.id;renderZoneLayers();renderZoneList();switchTab('zones');}});
+    zoneLeafletLayers[zone.id]=poly;
+  });
+}
+
+function renderZoneList(){
+  const el=document.getElementById('zone-list');
+  if(!zones.length){
+    el.innerHTML='<div id="zone-empty">No zones yet.<br>Switch to Zone mode and draw a polygon.</div>';
+    document.getElementById('zone-analysis').classList.remove('visible');return;
+  }
+  el.innerHTML='';
+  zones.forEach((zone,i)=>{
+    const areaM2=polygonAreaM2(zone.polygon);
+    const inside=pipesInZone(zone).length;
+    const div=document.createElement('div');
+    div.className='zone-item'+(zone.id===selectedZoneId?' sel':'');
+    div.innerHTML=
+      `<div class="zone-swatch" style="background:${zone.color}"></div>`+
+      `<div class="zone-body"><div class="zone-title">${zone.label}</div>`+
+      `<div class="zone-meta">${(areaM2/1000).toFixed(1)} dunum · ${inside} pipe(s) inside</div></div>`+
+      `<span class="zone-del" onclick="window._delZone(${i},event)">×</span>`;
+    div.onclick=()=>{selectedZoneId=zone.id;renderZoneLayers();renderZoneList();};
+    el.appendChild(div);
+  });
+  const sel=zones.find(z=>z.id===selectedZoneId);
+  const za=document.getElementById('zone-analysis');
+  if(sel){
+    za.classList.add('visible');
+    const areaM2=polygonAreaM2(sel.polygon);
+    document.getElementById('za-stats').innerHTML=
+      `<div class="za-row"><span class="zr-label">Area</span><span class="zr-val">${(areaM2/1000).toFixed(1)} dunum / ${(areaM2/10000).toFixed(2)} ha</span></div>`;
+    const inside=pipesInZone(sel);
+    const pipesEl=document.getElementById('za-pipes');
+    if(!inside.length){
+      pipesEl.innerHTML='<div style="font-size:11px;color:var(--text3);margin:4px 0">No pipes found inside this zone.</div>';
+    } else {
+      const byDia={};
+      inside.forEach(p=>{
+        if(!byDia[p.dia])byDia[p.dia]={count:0,len:0,layer:p.layer};
+        byDia[p.dia].count++;byDia[p.dia].len+=pipeLenM(p);
+      });
+      const order={'5':5,'4':4,'3':3,'2':2,'20mm':1};
+      const suggested=Object.entries(byDia).sort((a,b)=>(order[b[0]]||0)-(order[a[0]]||0))[0];
+      pipesEl.innerHTML=
+        `<div style="font-size:10px;color:var(--text3);margin-bottom:3px">Pipes inside (${inside.length})</div>`+
+        Object.entries(byDia).map(([dia,d])=>
+          `<div class="za-pipe-row"><span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PIPE_COLOR[dia]||'#888'};margin-right:4px;vertical-align:middle"></span>${dia} · ${d.count} pipe(s)</span><span>${d.len.toFixed(0)}m · ${d.layer}</span></div>`
+        ).join('')+
+        (suggested?`<div style="font-size:10px;color:var(--accent);margin-top:4px">Suggested main: ${suggested[0]} (${suggested[1].len.toFixed(0)}m)</div>`:'');
+    }
+    document.getElementById('za-spacing').value  =sel.treeSpacing||7;
+    document.getElementById('za-emitters').value =sel.emittersPerTree||2;
+    document.getElementById('za-lhr').value      =sel.lhrPerEmitter||4;
+    document.getElementById('za-result').style.display='none';
+  } else za.classList.remove('visible');
+}
+
+function runZoneEstimate(){
+  const sel=zones.find(z=>z.id===selectedZoneId);if(!sel)return;
+  const areaM2=polygonAreaM2(sel.polygon);
+  const areaDunum=areaM2/1000;
+  const spacing  =parseFloat(document.getElementById('za-spacing').value)||7;
+  const emitters =parseFloat(document.getElementById('za-emitters').value)||2;
+  const lhr      =parseFloat(document.getElementById('za-lhr').value)||4;
+  sel.treeSpacing=spacing;sel.emittersPerTree=emitters;sel.lhrPerEmitter=lhr;
+  const trees    =Math.round(areaM2/(spacing*spacing));
+  const totalLhr =trees*emitters*lhr;
+  const totalM3h =(totalLhr/1000).toFixed(2);
+  const laterals =Math.ceil(Math.sqrt(trees));
+  const submains =Math.ceil(areaDunum/5);
+  const inside   =pipesInZone(sel).sort((a,b)=>pipeLenM(b)-pipeLenM(a));
+  const mainLen  =inside.length?pipeLenM(inside[0]):null;
+  const feederSpacing=submains>0&&mainLen?(mainLen/submains).toFixed(0):'-';
+  const res=document.getElementById('za-result');
+  res.style.display='';
+  res.innerHTML=
+    `<b>${trees}</b> olive trees (${spacing}m × ${spacing}m)<br>`+
+    `<b>${laterals}</b> lateral runs (20mm drip lines)<br>`+
+    `<b>${submains}</b> submain offtakes (2″ or 3″)<br>`+
+    (mainLen?`Feeder spacing along main: ~<b>${feederSpacing}m</b><br>`:'No main pipe in zone yet<br>')+
+    `Flow demand: <b>${totalM3h} m³/hr</b> (<b>${totalLhr.toFixed(0)} L/hr</b>)`;
+  pushToFirebase();
+}
+window.runZoneEstimate=runZoneEstimate;
+
+function renameZone(){
+  const sel=zones.find(z=>z.id===selectedZoneId);if(!sel)return;
+  const name=prompt('Zone name:',sel.label);
+  if(name&&name.trim()){sel.label=name.trim();pushToFirebase();renderZoneLayers();renderZoneList();}
+}
+window.renameZone=renameZone;
+
+function deleteSelectedZone(){
+  const idx=zones.findIndex(z=>z.id===selectedZoneId);if(idx===-1)return;
+  pushHistory();zones.splice(idx,1);selectedZoneId=null;
+  pushToFirebase();renderZoneLayers();renderZoneList();
+}
+window.deleteSelectedZone=deleteSelectedZone;
+window._delZone=(i,e)=>{
+  e.stopPropagation();pushHistory();
+  if(selectedZoneId===zones[i].id)selectedZoneId=null;
+  zones.splice(i,1);pushToFirebase();renderZoneLayers();renderZoneList();
+};
+
 setMode('select');
 onLayerChange();
-renderSegList();
-updateSummary();
+document.getElementById('tg-node-type').style.display='none';
+document.getElementById('ep-zone-main')?.addEventListener('change',function(){
+  document.getElementById('ep-zone-fields').style.display=this.value==='yes'?'':'none';
+});
+renderPipeList();renderNodeList();renderZoneList();updateSummary();
 subscribeToProject();
 </script>
 </body>
