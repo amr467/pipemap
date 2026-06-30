@@ -328,6 +328,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
           <div id="net-validation" class="val-banner">—</div>
           <div id="net-stats"></div>
           <button onclick="diagnoseTankLengths()" style="width:100%;height:24px;font-size:11px;margin-top:6px">&#128269; Check tank-connected pipe lengths</button>
+          <button onclick="diagnoseTankShape(prompt('Tank label to inspect (e.g. T109)?'))" style="width:100%;height:24px;font-size:11px;margin-top:4px">&#128269; Inspect a tank's shape</button>
         </div>
 
         <div class="sblock">
@@ -1017,15 +1018,31 @@ function ensureTankPolygon(node){
   return node.polygon;
 }
 
-// Closest point on a single line segment to a given point (all in lat/lng,
-// treated as flat-earth which is fine at farm scale).
+// Closest point on a single line segment to a given point.
+// Converts to local flat metres first (lat/lng degrees are NOT equal
+// distances — at ~32°N, 1° longitude is ~15% shorter than 1° latitude —
+// so projecting directly in raw degrees distorts the result, especially
+// for elongated or irregular tank shapes). We project in metres, then
+// convert the result back to lat/lng.
 function closestPointOnSegment(p,a,b){
-  const dx=b[1]-a[1],dy=b[0]-a[0]; // lng,lat deltas
+  const refLat=a[0]; // local reference latitude for the metre conversion
+  const mPerDegLat=111320;
+  const mPerDegLng=111320*Math.cos(refLat*Math.PI/180);
+
+  const toXY=(pt)=>[ (pt[1]-a[1])*mPerDegLng, (pt[0]-a[0])*mPerDegLat ]; // [x,y] metres relative to a
+  const aXY=[0,0];
+  const bXY=toXY(b);
+  const pXY=toXY(p);
+
+  const dx=bXY[0]-aXY[0], dy=bXY[1]-aXY[1];
   const lenSq=dx*dx+dy*dy;
   if(lenSq===0)return a;
-  let t=((p[1]-a[1])*dx+(p[0]-a[0])*dy)/lenSq;
+  let t=((pXY[0]-aXY[0])*dx+(pXY[1]-aXY[1])*dy)/lenSq;
   t=Math.max(0,Math.min(1,t));
-  return [a[0]+t*dy,a[1]+t*dx];
+  const resultX=aXY[0]+t*dx, resultY=aXY[1]+t*dy;
+
+  // Convert back to lat/lng
+  return [a[0]+resultY/mPerDegLat, a[1]+resultX/mPerDegLng];
 }
 
 // Closest point anywhere on a tank's polygon boundary to a given lat/lng.
@@ -1103,6 +1120,41 @@ function diagnoseTankLengths(){
   alert(rows.join('\n')+`\n\nIf "default ~4m radius" appears, that tank has never had its real footprint drawn — it's using a placeholder circle. Use "Redraw footprint" on that tank (in its edit panel) to draw its actual size, which will correct these lengths.`);
 }
 window.diagnoseTankLengths=diagnoseTankLengths;
+
+// Inspects a tank's polygon for geometric problems: a vertex far from the
+// rest (likely a mis-click while drawing), or excessive overall spread,
+// either of which would make closestPointOnTankBoundary return a point
+// much farther away than the tank's apparent visual size suggests.
+function diagnoseTankShape(tankLabel){
+  const node=nodes.find(n=>(n.label||'').toLowerCase()===tankLabel.toLowerCase()&&n.type==='tank');
+  if(!node){alert(`No tank found with label "${tankLabel}". Check the Nodes tab for exact labels.`);return;}
+  const poly=node.polygon;
+  if(!poly||poly.length<3){alert(`${node.label} has no custom polygon (using default circle).`);return;}
+
+  // Distance from centroid to each vertex
+  const distsFromCentroid=poly.map(pt=>haversineM([node.lat,node.lng],pt));
+  const maxD=Math.max(...distsFromCentroid), minD=Math.min(...distsFromCentroid);
+  const avgD=distsFromCentroid.reduce((a,b)=>a+b,0)/distsFromCentroid.length;
+
+  // Edge lengths
+  const edgeLens=[];
+  for(let i=0;i<poly.length;i++){
+    edgeLens.push(haversineM(poly[i],poly[(i+1)%poly.length]));
+  }
+  const maxEdge=Math.max(...edgeLens);
+
+  let warnings=[];
+  if(maxD>avgD*3) warnings.push(`One vertex is ${maxD.toFixed(1)}m from centroid while the average is ${avgD.toFixed(1)}m — likely a stray click while drawing this tank's shape.`);
+  if(maxEdge>avgD*4) warnings.push(`One edge is ${maxEdge.toFixed(1)}m long, unusually long relative to the tank's average radius (${avgD.toFixed(1)}m).`);
+
+  const msg=`${node.label} — ${poly.length} vertices\n\n`+
+    `Centroid distance — min: ${minD.toFixed(1)}m, max: ${maxD.toFixed(1)}m, avg: ${avgD.toFixed(1)}m\n`+
+    `Longest edge: ${maxEdge.toFixed(1)}m\n\n`+
+    (warnings.length?'⚠ '+warnings.join('\n⚠ '):'No obvious geometry problems detected — shape looks reasonable.')+
+    `\n\nRaw vertices (lat,lng):\n`+poly.map((p,i)=>`${i}: ${p[0].toFixed(6)}, ${p[1].toFixed(6)}`).join('\n');
+  alert(msg);
+}
+window.diagnoseTankShape=diagnoseTankShape;
 
 // ── Snap: find nearest node within threshold ───────────
 function snapThresh(){return parseFloat(document.getElementById('snap-thresh').value)||5;}
