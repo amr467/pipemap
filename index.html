@@ -327,6 +327,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
           <div class="sblock-title">Network</div>
           <div id="net-validation" class="val-banner">—</div>
           <div id="net-stats"></div>
+          <button onclick="diagnoseTankLengths()" style="width:100%;height:24px;font-size:11px;margin-top:6px">&#128269; Check tank-connected pipe lengths</button>
         </div>
 
         <div class="sblock">
@@ -1070,6 +1071,38 @@ function pipeLenM(pipe){
   let t=0;for(let i=0;i<pts.length-1;i++)t+=haversineM(pts[i],pts[i+1]);
   return t;
 }
+
+// Diagnostic: shows every pipe connected to a tank, comparing its current
+// length (using the boundary attach point, if set) against what it would
+// measure using the tank's raw centroid instead. Helps explain any jump in
+// procurement totals caused by attach points snapping to a default tank
+// footprint rather than the tank's real size.
+function diagnoseTankLengths(){
+  const tankPipes=pipes.filter(p=>{
+    const sn=nodes.find(n=>n.id===p.startNodeId),en=nodes.find(n=>n.id===p.endNodeId);
+    return sn?.type==='tank'||en?.type==='tank';
+  });
+  if(!tankPipes.length){alert('No pipes are connected to a tank — this isn\'t the cause.');return;}
+
+  let rows=['Pipe | Current length | Centroid-based length | Difference | Tank radius used'];
+  let maxDiff=0;
+  tankPipes.forEach(pipe=>{
+    const sn=nodes.find(n=>n.id===pipe.startNodeId),en=nodes.find(n=>n.id===pipe.endNodeId);
+    const curLen=pipeLenM(pipe);
+    // Recompute using raw centroids only, ignoring any attachPt
+    const startLL=[sn.lat,sn.lng],endLL=[en.lat,en.lng];
+    const pts=[startLL,...(pipe.waypoints||[]),endLL];
+    let centroidLen=0;for(let i=0;i<pts.length-1;i++)centroidLen+=haversineM(pts[i],pts[i+1]);
+    const diff=curLen-centroidLen;
+    if(Math.abs(diff)>Math.abs(maxDiff))maxDiff=diff;
+    let tankInfo='';
+    if(sn?.type==='tank') tankInfo+=`${sn.label}: ${sn.polygon?'custom shape':'default ~4m radius'}`;
+    if(en?.type==='tank') tankInfo+=(tankInfo?', ':'')+`${en.label}: ${en.polygon?'custom shape':'default ~4m radius'}`;
+    rows.push(`${pipe.label}: ${curLen.toFixed(1)}m vs ${centroidLen.toFixed(1)}m (Δ${diff>=0?'+':''}${diff.toFixed(1)}m) — ${tankInfo}`);
+  });
+  alert(rows.join('\n')+`\n\nIf "default ~4m radius" appears, that tank has never had its real footprint drawn — it's using a placeholder circle. Use "Redraw footprint" on that tank (in its edit panel) to draw its actual size, which will correct these lengths.`);
+}
+window.diagnoseTankLengths=diagnoseTankLengths;
 
 // ── Snap: find nearest node within threshold ───────────
 function snapThresh(){return parseFloat(document.getElementById('snap-thresh').value)||5;}
