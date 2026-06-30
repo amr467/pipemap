@@ -155,6 +155,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
 
 /* ── Zones ── */
 .lt-pill.on-zones{background:#1a1a0a;border-color:#a8850a;color:#fbbf24}
+#btn-hierarchy.active{background:#0a1a2a;border-color:#3080c8;color:#60a5fa}
 #tab-zones{flex-direction:column}
 #zone-wrap{padding:10px 12px;flex:1;overflow-y:auto}
 .zone-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:3px;font-size:11px;cursor:pointer;background:var(--surface2)}
@@ -227,6 +228,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
     <button class="lt-pill on-nodes"    id="lt-nodes"    onclick="toggleLayer('nodes')">&#9632; Nodes</button>
     <button class="lt-pill on-zones"    id="lt-zones"    onclick="toggleLayer('zones')">&#9650; Zones</button>
     <button class="lt-pill on-elev"     id="lt-elev"     onclick="toggleLayer('elev')">&#9651; Elev</button>
+    <button class="lt-pill" id="btn-hierarchy" onclick="toggleHierarchyView()" title="Fade/thin new-layer pipes by how many hops from the nearest source — shows which pipes feed which">&#8645; Hierarchy</button>
   </div>
   <div class="hdiv"></div>
   <span id="sync-status" class="offline">&#9679; offline</span>
@@ -351,16 +353,16 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
             <div class="legend-row"><span style="color:#f97316;font-size:13px">E</span>&nbsp;Endpoint / emitter</div>
             <div class="legend-row"><span style="color:#aaa;font-size:13px">J</span>&nbsp;Junction (auto)</div>
             <div class="legend-row"><span style="color:var(--danger);font-size:13px">!</span>&nbsp;Unconnected endpoint</div>
-            <div style="font-size:10px;color:var(--text3);margin:5px 0 2px">Pipes — existing</div>
+            <div style="font-size:10px;color:var(--text3);margin:5px 0 2px">Pipes — existing (color = diameter)</div>
             <div class="legend-row"><div class="ll" style="background:#4ade80"></div>Good</div>
             <div class="legend-row"><div class="ll" style="background:#a3e635"></div>Fair</div>
             <div class="legend-row"><div class="ll" style="background:repeating-linear-gradient(to right,#f97316 0 6px,transparent 6px 10px)"></div>Poor</div>
             <div class="legend-row"><div class="ll" style="background:repeating-linear-gradient(to right,#f87171 0 8px,transparent 8px 14px)"></div>Replace</div>
-            <div style="font-size:10px;color:var(--text3);margin:5px 0 2px">Pipes — new layout</div>
-            <div class="legend-row"><div class="ll" style="background:#60a5fa"></div>New pipe</div>
-            <div class="legend-row"><div class="ll" style="background:#fbbf24"></div>Update (near existing)</div>
-            <div class="legend-row"><div class="ll" style="background:#aaa;opacity:.6"></div>Undecided</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">Thickness = diameter</div>
+            <div style="font-size:10px;color:var(--text3);margin:5px 0 2px">Pipes — new layout (color = diameter, same as existing)</div>
+            <div class="legend-row"><div class="ll" style="background:#60a5fa"></div>Required — solid line</div>
+            <div class="legend-row"><div class="ll" style="background:repeating-linear-gradient(to right,#60a5fa 0 10px,transparent 10px 16px)"></div>Update — long dash</div>
+            <div class="legend-row"><div class="ll" style="background:repeating-linear-gradient(to right,#60a5fa 0 3px,transparent 3px 6px);opacity:.7"></div>Undecided — short dash</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Thickness = diameter &nbsp;·&nbsp; toggle Hierarchy view to see flow depth from source</div>
           </div>
         </div>
 
@@ -485,6 +487,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
           <div class="ep-row"><label>Booster head (m)</label>
             <input id="nep-tankpump" type="number" placeholder="0 = gravity" min="0" style="flex:1;height:24px;font-size:11px">
           </div>
+          <button onclick="reshapeSelectedTank()" style="width:100%;height:24px;font-size:11px;margin-top:2px">&#9650; Redraw footprint</button>
         </div>
         <!-- Pump station fields -->
         <div id="nep-pumpstation-fields" style="display:none">
@@ -624,6 +627,57 @@ const NODE_LABEL={well:'W',tank:'T',pump:'P',endpoint:'E',junction:'J'};
 // Last hydraulics run results — used to colour nodes on map
 let lastHydHeads=null;
 
+// Hierarchy view: fades/thins new-layer pipes by hop-distance from nearest source
+let hierarchyViewOn=false;
+let pipeHierarchyDepth={}; // pipeId -> integer depth (0 = directly off a source)
+
+function toggleHierarchyView(){
+  hierarchyViewOn=!hierarchyViewOn;
+  document.getElementById('btn-hierarchy').classList.toggle('active',hierarchyViewOn);
+  if(hierarchyViewOn) computeHierarchyDepth();
+  pipeLayer.redraw();
+}
+window.toggleHierarchyView=toggleHierarchyView;
+
+// BFS from every well/tank/pump-station across new-layer pipes only.
+// pipeHierarchyDepth[pipeId] = how many hops that pipe is from the nearest source.
+function computeHierarchyDepth(){
+  pipeHierarchyDepth={};
+  const newPipes=pipes.filter(p=>p.layer==='new');
+  if(!newPipes.length)return;
+
+  const adj={};
+  newPipes.forEach(pipe=>{
+    [pipe.startNodeId,pipe.endNodeId].forEach(nid=>{if(!adj[nid])adj[nid]=[];});
+    adj[pipe.startNodeId].push({pipe,neighbourId:pipe.endNodeId});
+    adj[pipe.endNodeId].push({pipe,neighbourId:pipe.startNodeId});
+  });
+
+  const sourceIds=nodes.filter(n=>['well','tank','pump'].includes(n.type)).map(n=>n.id);
+  if(!sourceIds.length)return;
+
+  const nodeDepth={};
+  sourceIds.forEach(id=>{nodeDepth[id]=0;});
+  const queue=[...sourceIds];
+  const visitedNodes=new Set(sourceIds);
+
+  while(queue.length){
+    const nid=queue.shift();
+    const d=nodeDepth[nid];
+    (adj[nid]||[]).forEach(({pipe,neighbourId})=>{
+      // First time we reach this pipe at all, record its depth as the
+      // depth of the node we're coming FROM (so the trunk segment off
+      // the source itself is depth 0, the next segment out is depth 1, etc).
+      if(pipeHierarchyDepth[pipe.id]===undefined) pipeHierarchyDepth[pipe.id]=d;
+      if(!visitedNodes.has(neighbourId)){
+        visitedNodes.add(neighbourId);
+        nodeDepth[neighbourId]=d+1;
+        queue.push(neighbourId);
+      }
+    });
+  }
+}
+
 function pipeStyle(pipe){
   const layer=pipe.layer, status=pipe.status, cond=pipe.condition||'good';
   if(layer==='existing'){
@@ -634,10 +688,14 @@ function pipeStyle(pipe){
       case 'replace': return {color:'#f87171',dash:[10,6],alpha:0.85};
     }
   } else {
+    // New layer: color = diameter (matches existing layer's visual language),
+    // status is conveyed via dash pattern instead of color so both layers
+    // read consistently at a glance.
+    const baseColor=PIPE_COLOR[pipe.dia]||'#60a5fa';
     switch(status){
-      case 'required':  return {color:'#60a5fa',dash:null,alpha:1.0};
-      case 'update':    return {color:'#fbbf24',dash:null,alpha:1.0};
-      case 'undecided': return {color:'#aaaaaa',dash:[3,3],alpha:0.75};
+      case 'required':  return {color:baseColor,dash:null,alpha:1.0};       // solid
+      case 'update':    return {color:baseColor,dash:[10,6],alpha:1.0};     // long dash
+      case 'undecided': return {color:baseColor,dash:[3,3],alpha:0.7};      // short dash, faded
     }
   }
   return {color:'#888',dash:null,alpha:1};
@@ -662,7 +720,10 @@ const PipeLayer=L.Layer.extend({
     this._redraw();
   },
   onRemove(){this._svg.remove();},
-  redraw(){this._redraw();},
+  redraw(){
+    if(hierarchyViewOn) computeHierarchyDepth();
+    this._redraw();
+  },
   _redraw(){
     const svg=this._svg;
     while(svg.firstChild)svg.removeChild(svg.firstChild);
@@ -685,23 +746,36 @@ const PipeLayer=L.Layer.extend({
     if(!pts||pts.length<2)return;
     const isSel=pipe.id===selectedPipeId;
     const st=pipeStyle(pipe);
-    const lw=(PIPE_WIDTH[pipe.dia]||2)+(isSel?2:0);
+    let lw=(PIPE_WIDTH[pipe.dia]||2)+(isSel?2:0);
+    let alpha=st.alpha;
+
+    // Hierarchy overlay — only affects new-layer pipes, only when toggled on
+    if(hierarchyViewOn && pipe.layer==='new'){
+      const depth=pipeHierarchyDepth[pipe.id];
+      if(depth!==undefined){
+        // Depth 0 = trunk from source: full strength. Each hop out fades and thins.
+        const fade=Math.max(0.25, 1-depth*0.16);
+        lw=Math.max(1, lw*Math.max(0.4,1-depth*0.12));
+        alpha=alpha*fade;
+      } else {
+        // Not reachable from any source — show as a dim, clearly orphaned line
+        alpha=alpha*0.25;
+      }
+    }
+
     if(isSel){const g=mkPoly(pts,st.color,lw+6,null);g.setAttribute('stroke-opacity','0.2');svg.appendChild(g);}
     const pl=mkPoly(pts,st.color,lw,st.dash);
-    pl.setAttribute('stroke-opacity',String(st.alpha));
+    pl.setAttribute('stroke-opacity',String(alpha));
     pl.style.pointerEvents='stroke';pl.style.cursor=mode==='select'?'pointer':'default';
     pl.addEventListener('click',ev=>{if(mode==='select'){ev.stopPropagation();selectPipe(pipe.id);}});
     svg.appendChild(pl);
-    // Direction arrow
+
+    // Direction arrow(s) — bigger, outlined for contrast, repeated along long pipes
     const dir=pipe.direction||'auto';
     if(dir!=='none'){
-      const midIdx=Math.floor((pts.length-1)/2);
-      const a=pts[midIdx],b=pts[midIdx+1]||pts[midIdx];
-      const reverse=dir==='reverse';
-      const p1=reverse?b:a, p2=reverse?a:b;
-      drawArrow(svg,p1,p2,st.color,lw);
-      if(dir==='both') drawArrow(svg,p2,p1,st.color,lw);
+      drawDirectionArrows(svg,pts,dir,st.color,lw);
     }
+
     // Valve icon — show on pipes connected to a tank
     const sn=nodes.find(n=>n.id===pipe.startNodeId);
     const en=nodes.find(n=>n.id===pipe.endNodeId);
@@ -733,9 +807,11 @@ const PipeLayer=L.Layer.extend({
     const sn=nodes.find(n=>n.id===pipe.startNodeId);
     const en=nodes.find(n=>n.id===pipe.endNodeId);
     if(!sn||!en)return null;
-    pts.push(this._map.latLngToLayerPoint(L.latLng(sn.lat,sn.lng)));
+    const startLL=pipe.startAttachPt||[sn.lat,sn.lng];
+    const endLL=pipe.endAttachPt||[en.lat,en.lng];
+    pts.push(this._map.latLngToLayerPoint(L.latLng(startLL[0],startLL[1])));
     (pipe.waypoints||[]).forEach(wp=>pts.push(this._map.latLngToLayerPoint(L.latLng(wp[0],wp[1]))));
-    pts.push(this._map.latLngToLayerPoint(L.latLng(en.lat,en.lng)));
+    pts.push(this._map.latLngToLayerPoint(L.latLng(endLL[0],endLL[1])));
     return pts;
   }
 });
@@ -750,19 +826,71 @@ function mkPoly(pts,stroke,lw,dash){
   if(dash)pl.setAttribute('stroke-dasharray',dash.join(' '));
   return pl;
 }
-function drawArrow(svg,a,b,color,lw){
+// Draws one or more direction arrows along a pipe's polyline, sized and
+// outlined for visibility regardless of background. Repeats every ~110px
+// of screen length on longer pipes so direction is obvious wherever you look.
+function drawDirectionArrows(svg,pts,dir,color,lw){
+  if(pts.length<2)return;
+  // total on-screen length of the pipe
+  let totalLen=0;
+  for(let i=0;i<pts.length-1;i++) totalLen+=Math.hypot(pts[i+1].x-pts[i].x,pts[i+1].y-pts[i].y);
+  if(totalLen<16)return;
+
+  const spacing=110; // px between repeated arrows
+  const count=Math.max(1,Math.floor(totalLen/spacing));
+  for(let k=1;k<=count;k++){
+    const targetDist=(totalLen*k)/(count+1);
+    const {point,segA,segB}=pointAtDistance(pts,targetDist);
+    if(!point)continue;
+    const reverse=dir==='reverse';
+    const p1=reverse?segB:segA, p2=reverse?segA:segB;
+    drawArrow(svg,p1,p2,point,color,lw);
+    if(dir==='both') drawArrow(svg,p2,p1,point,color,lw);
+  }
+}
+
+// Walks the polyline to find the point at a given pixel distance from the start,
+// returning that point plus the segment endpoints it falls on (for direction).
+function pointAtDistance(pts,dist){
+  let acc=0;
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i],b=pts[i+1];
+    const segLen=Math.hypot(b.x-a.x,b.y-a.y);
+    if(acc+segLen>=dist){
+      const t=(dist-acc)/segLen;
+      return {point:{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t},segA:a,segB:b};
+    }
+    acc+=segLen;
+  }
+  return {point:null,segA:null,segB:null};
+}
+
+function drawArrow(svg,a,b,center,color,lw){
   const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
-  if(len<8)return;
+  if(len<1)return;
   const ux=dx/len,uy=dy/len;
-  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
-  const sz=Math.max(6,lw*2);
   const px=-uy,py=ux;
-  const tip={x:mx+ux*sz,y:my+uy*sz};
-  const bl={x:mx-ux*sz*0.5+px*sz*0.5,y:my-uy*sz*0.5+py*sz*0.5};
-  const br={x:mx-ux*sz*0.5-px*sz*0.5,y:my-uy*sz*0.5-py*sz*0.5};
+  // Bigger arrowhead, scales with pipe width but has a sensible floor so
+  // thin pipes (20mm) still get a clearly visible arrow.
+  const sz=Math.max(9,lw*2.2);
+  const cx=center.x,cy=center.y;
+  const tip={x:cx+ux*sz,        y:cy+uy*sz};
+  const bl ={x:cx-ux*sz*0.6+px*sz*0.7, y:cy-uy*sz*0.6+py*sz*0.7};
+  const br ={x:cx-ux*sz*0.6-px*sz*0.7, y:cy-uy*sz*0.6-py*sz*0.7};
+  // Dark outline pass first for contrast against any background...
+  const outline=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  outline.setAttribute('points',`${tip.x},${tip.y} ${bl.x},${bl.y} ${br.x},${br.y}`);
+  outline.setAttribute('fill','#0008');
+  outline.setAttribute('stroke','#000a');
+  outline.setAttribute('stroke-width','2.5');
+  svg.appendChild(outline);
+  // ...then the colored fill on top
   const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
   poly.setAttribute('points',`${tip.x},${tip.y} ${bl.x},${bl.y} ${br.x},${br.y}`);
-  poly.setAttribute('fill',color);poly.setAttribute('opacity','0.85');
+  poly.setAttribute('fill',color);
+  poly.setAttribute('stroke','#fff');
+  poly.setAttribute('stroke-width','1');
+  poly.setAttribute('opacity','0.95');
   svg.appendChild(poly);
 }
 const pipeLayer=new PipeLayer();
@@ -770,6 +898,7 @@ pipeLayer.addTo(map);
 
 // ── Node markers ───────────────────────────────────────
 const nodeLeafletMarkers={};
+const tankLeafletShapes={}; // separate from point markers — these are the polygon overlays
 function mkNodeIcon(node,unconnected){
   const col=unconnected?'#f87171':NODE_COLOR[node.type]||'#aaa';
   const lbl=unconnected?'!':NODE_LABEL[node.type]||'?';
@@ -781,9 +910,48 @@ function mkNodeIcon(node,unconnected){
 function renderNodeMarkers(){
   Object.values(nodeLeafletMarkers).forEach(m=>m.remove());
   for(const k in nodeLeafletMarkers)delete nodeLeafletMarkers[k];
+  Object.values(tankLeafletShapes).forEach(m=>m.remove());
+  for(const k in tankLeafletShapes)delete tankLeafletShapes[k];
   if(!layerVisible.nodes)return;
   nodes.forEach(node=>{
     const unconnected=isUnconnected(node);
+
+    if(node.type==='tank'){
+      // Draw the tank footprint as a filled polygon instead of a single dot,
+      // so pipes attaching at different points around it look correct.
+      const poly=ensureTankPolygon(node);
+      const isSel=node.id===selectedNodeId;
+      const shape=L.polygon(poly,{
+        color:unconnected?'#f87171':NODE_COLOR.tank,
+        weight:isSel?2.5:1.5,
+        fillColor:NODE_COLOR.tank,
+        fillOpacity:isSel?0.35:0.22
+      }).addTo(map);
+      shape.bindTooltip(node.label||'tank',{permanent:false,direction:'top'});
+      shape.on('click',e=>{
+        L.DomEvent.stopPropagation(e);
+        if(mode==='pipe') handleNodeClickWhileDrawing(node,e.latlng.lat,e.latlng.lng);
+        else if(mode==='select') selectNode(node.id);
+        else if(mode==='node') reshapeTank(node);
+      });
+      tankLeafletShapes[node.id]=shape;
+      // Small label marker at the centroid so it's identifiable at a glance
+      const mk=L.marker([node.lat,node.lng],{
+        icon:L.divIcon({
+          html:`<div style="width:16px;height:16px;background:${unconnected?'#f87171':NODE_COLOR.tank};border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;margin:-8px 0 0 -8px;box-shadow:0 1px 3px #0006">${unconnected?'!':'T'}</div>`,
+          className:'',iconSize:[16,16]
+        }),
+        zIndexOffset:1000
+      }).addTo(map);
+      mk.on('click',e=>{
+        L.DomEvent.stopPropagation(e);
+        if(mode==='pipe') handleNodeClickWhileDrawing(node);
+        else if(mode==='select') selectNode(node.id);
+      });
+      nodeLeafletMarkers[node.id]=mk;
+      return;
+    }
+
     const mk=L.marker([node.lat,node.lng],{icon:mkNodeIcon(node,unconnected),zIndexOffset:1000})
       .bindTooltip(node.label||node.type,{permanent:false,direction:'top',offset:[0,-12]})
       .addTo(map);
@@ -802,6 +970,60 @@ function renderNodeMarkers(){
 function isUnconnected(node){
   if(node.type==='junction')return false; // junctions auto-created, always connected
   return!pipes.some(p=>p.startNodeId===node.id||p.endNodeId===node.id);
+}
+
+// ── Tank-as-area geometry helpers ──────────────────────
+// Tanks can have a polygon footprint so pipes attach at realistic points
+// around the perimeter instead of all bunching onto one centre dot.
+
+// Auto-generate a small circular polygon around a point — used for tanks
+// that don't have a hand-drawn shape yet (new tanks before drawing, or
+// old point-only tanks coming from migration).
+function defaultTankPolygon(lat,lng,radiusM){
+  radiusM=radiusM||4;
+  const pts=[];
+  const n=10;
+  for(let i=0;i<n;i++){
+    const ang=(i/n)*2*Math.PI;
+    const dLat=(radiusM*Math.cos(ang))/111320;
+    const dLng=(radiusM*Math.sin(ang))/(111320*Math.cos(lat*Math.PI/180));
+    pts.push([lat+dLat,lng+dLng]);
+  }
+  return pts;
+}
+
+// Ensures a tank node has a polygon, generating a default one if missing.
+// Call this any time you're about to read node.polygon, so old data never breaks.
+function ensureTankPolygon(node){
+  if(node.type!=='tank')return null;
+  if(!node.polygon||node.polygon.length<3){
+    node.polygon=defaultTankPolygon(node.lat,node.lng);
+  }
+  return node.polygon;
+}
+
+// Closest point on a single line segment to a given point (all in lat/lng,
+// treated as flat-earth which is fine at farm scale).
+function closestPointOnSegment(p,a,b){
+  const dx=b[1]-a[1],dy=b[0]-a[0]; // lng,lat deltas
+  const lenSq=dx*dx+dy*dy;
+  if(lenSq===0)return a;
+  let t=((p[1]-a[1])*dx+(p[0]-a[0])*dy)/lenSq;
+  t=Math.max(0,Math.min(1,t));
+  return [a[0]+t*dy,a[1]+t*dx];
+}
+
+// Closest point anywhere on a tank's polygon boundary to a given lat/lng.
+function closestPointOnTankBoundary(node,lat,lng){
+  const poly=ensureTankPolygon(node);
+  let best=null,bestD=Infinity;
+  for(let i=0;i<poly.length;i++){
+    const a=poly[i],b=poly[(i+1)%poly.length];
+    const cp=closestPointOnSegment([lat,lng],a,b);
+    const d=haversineM([lat,lng],cp);
+    if(d<bestD){bestD=d;best=cp;}
+  }
+  return {point:best,dist:bestD};
 }
 
 // ── Elevation markers ──────────────────────────────────
@@ -828,7 +1050,9 @@ function haversineM(a,b){
 function pipeLenM(pipe){
   const sn=nodes.find(n=>n.id===pipe.startNodeId),en=nodes.find(n=>n.id===pipe.endNodeId);
   if(!sn||!en)return 0;
-  const pts=[[sn.lat,sn.lng],...(pipe.waypoints||[]),[en.lat,en.lng]];
+  const startLL=pipe.startAttachPt||[sn.lat,sn.lng];
+  const endLL=pipe.endAttachPt||[en.lat,en.lng];
+  const pts=[startLL,...(pipe.waypoints||[]),endLL];
   let t=0;for(let i=0;i<pts.length-1;i++)t+=haversineM(pts[i],pts[i+1]);
   return t;
 }
@@ -837,14 +1061,28 @@ function pipeLenM(pipe){
 function snapThresh(){return parseFloat(document.getElementById('snap-thresh').value)||5;}
 function proxThresh(){return parseFloat(document.getElementById('prox-thresh').value)||5;}
 
-function nearestNode(lat,lng,excludeId){
-  let best=null,bestD=Infinity;
+// Returns {node, snapPoint} or null. snapPoint is the boundary point for tanks,
+// or the node's own lat/lng for everything else. Does NOT mutate the node —
+// stashing data on shared node objects would leak into the next Firebase write.
+function nearestNodeWithSnap(lat,lng,excludeId){
+  let best=null,bestD=Infinity,bestSnapPt=null;
   nodes.forEach(n=>{
     if(n.id===excludeId)return;
-    const d=haversineM([lat,lng],[n.lat,n.lng]);
-    if(d<bestD){bestD=d;best=n;}
+    let d,snapPt;
+    if(n.type==='tank'){
+      const r=closestPointOnTankBoundary(n,lat,lng);
+      d=r.dist;snapPt=r.point;
+    } else {
+      d=haversineM([lat,lng],[n.lat,n.lng]);
+      snapPt=[n.lat,n.lng];
+    }
+    if(d<bestD){bestD=d;best=n;bestSnapPt=snapPt;}
   });
-  return bestD<=snapThresh()?best:null;
+  return bestD<=snapThresh()?{node:best,snapPoint:bestSnapPt}:null;
+}
+function nearestNode(lat,lng,excludeId){
+  const r=nearestNodeWithSnap(lat,lng,excludeId);
+  return r?r.node:null;
 }
 
 function getOrCreateNode(lat,lng,excludeId){
@@ -878,6 +1116,8 @@ function classifyNewPipe(pipe){
 function setMode(m){
   if(mode==='pipe'&&drawPts.length>1)finishPipe();
   if(mode==='zone'&&zonePts.length>2)finishZone();
+  if(mode==='node'&&tankDrawPts.length>2)finishTankDraw();
+  else if(mode==='node'&&tankDrawPts.length>0) cancelTankDraw();
   drawPts=[];drawStartNodeId=null;
   zonePts=[];zoneMarkers.forEach(mk=>mk.remove());zoneMarkers=[];
   drawMarkers.forEach(mk=>mk.remove());drawMarkers=[];
@@ -916,11 +1156,17 @@ map.on('click',async e=>{
   const lat=e.latlng.lat,lng=e.latlng.lng;
 
   if(mode==='node'){
-    placeNode(lat,lng);
+    if(tankDrawPts.length>0){
+      // Already mid-way through drawing/reshaping a tank footprint
+      continueTankDraw(lat,lng);
+    } else {
+      placeNode(lat,lng);
+    }
   } else if(mode==='pipe'){
-    // Check if near an existing node
-    const snap=nearestNode(lat,lng,null);
-    const pt=snap?[snap.lat,snap.lng]:[lat,lng];
+    // Check if near an existing node (boundary-aware for tanks)
+    const snapResult=nearestNodeWithSnap(lat,lng,null);
+    const snap=snapResult?snapResult.node:null;
+    const pt=snapResult?snapResult.snapPoint:[lat,lng];
     if(drawPts.length===0){
       drawStartNodeId=snap?snap.id:null;
     }
@@ -944,6 +1190,7 @@ map.on('click',async e=>{
 map.on('dblclick',e=>{
   if(mode==='pipe'&&drawPts.length>1){L.DomEvent.stopPropagation(e);finishPipe();}
   if(mode==='zone'&&zonePts.length>2){L.DomEvent.stopPropagation(e);finishZone();}
+  if(mode==='node'&&tankDrawPts.length>2){L.DomEvent.stopPropagation(e);finishTankDraw();}
 });
 
 map.on('mousemove',e=>{
@@ -964,26 +1211,41 @@ map.on('mousemove',e=>{
   }
 });
 
-function handleNodeClickWhileDrawing(node){
+function handleNodeClickWhileDrawing(node,clickLat,clickLng){
+  // For tanks, attach at the boundary point closest to where the user actually
+  // clicked — not the centroid — so the pipe visually meets the tank's edge.
+  let attachLL=[node.lat,node.lng];
+  if(node.type==='tank'&&clickLat!==undefined){
+    const r=closestPointOnTankBoundary(node,clickLat,clickLng);
+    attachLL=r.point;
+  }
   if(drawPts.length===0){
     drawStartNodeId=node.id;
-    drawPts.push([node.lat,node.lng]);
-    const mk=L.circleMarker([node.lat,node.lng],{radius:5,color:'#4ade80',fillColor:'#4ade80',fillOpacity:1,weight:1}).addTo(map);
+    drawPts.push(attachLL);
+    const mk=L.circleMarker(attachLL,{radius:5,color:'#4ade80',fillColor:'#4ade80',fillOpacity:1,weight:1}).addTo(map);
     drawMarkers.push(mk);
     pipeLayer.redraw();
   } else {
     // End on this node
-    drawPts.push([node.lat,node.lng]);
+    drawPts.push(attachLL);
     finishPipe(node.id);
   }
 }
 
 // ── Place node ─────────────────────────────────────────
 function placeNode(lat,lng){
-  pushHistory();
   const type=document.getElementById('sel-node-type').value;
+
+  if(type==='tank'){
+    // Tanks are drawn as a footprint polygon, same interaction as Zone mode:
+    // click to add boundary points, double-click to close the shape.
+    startTankDraw(lat,lng);
+    return;
+  }
+
+  pushHistory();
   const snap=nearestNode(lat,lng,null);
-  if(snap&&(type==='well'||type==='tank'||type==='endpoint')){
+  if(snap&&(type==='well'||type==='endpoint')){
     // Upgrade existing junction
     snap.type=type;
     snap.label=NODE_LABEL[type]+nodeCounter++;
@@ -1000,6 +1262,76 @@ function placeNode(lat,lng){
   pushToFirebase();renderNodeMarkers();renderNodeList();updateSummary();
 }
 
+// ── Tank footprint drawing (reuses zone-style polygon interaction) ──
+let tankDrawPts=[], tankDrawMarkers=[], tankGhostPolyline=null, reshapingTankId=null;
+
+function startTankDraw(lat,lng){
+  tankDrawPts=[[lat,lng]];
+  reshapingTankId=null;
+  const mk=L.circleMarker([lat,lng],{radius:4,color:'#60a5fa',fillColor:'#60a5fa',fillOpacity:1,weight:1}).addTo(map);
+  tankDrawMarkers.push(mk);
+}
+function continueTankDraw(lat,lng){
+  tankDrawPts.push([lat,lng]);
+  const mk=L.circleMarker([lat,lng],{radius:4,color:'#60a5fa',fillColor:'#60a5fa',fillOpacity:1,weight:1}).addTo(map);
+  tankDrawMarkers.push(mk);
+  renderTankGhost();
+}
+function renderTankGhost(){
+  if(tankGhostPolyline){tankGhostPolyline.remove();tankGhostPolyline=null;}
+  if(tankDrawPts.length<2)return;
+  tankGhostPolyline=L.polyline([...tankDrawPts,tankDrawPts[0]],{color:'#60a5fa',weight:2,dashArray:'5,4',opacity:0.8}).addTo(map);
+}
+function finishTankDraw(){
+  if(tankDrawPts.length<3){
+    cancelTankDraw();
+    return;
+  }
+  pushHistory();
+  // Centroid for the node's lat/lng (used for elevation, label position, hydraulics)
+  const lats=tankDrawPts.map(p=>p[0]),lngs=tankDrawPts.map(p=>p[1]);
+  const cLat=lats.reduce((a,b)=>a+b,0)/lats.length;
+  const cLng=lngs.reduce((a,b)=>a+b,0)/lngs.length;
+
+  if(reshapingTankId){
+    const node=nodes.find(n=>n.id===reshapingTankId);
+    if(node){node.polygon=[...tankDrawPts];node.lat=cLat;node.lng=cLng;}
+  } else {
+    const node={
+      id:'n'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+      type:'tank',lat:cLat,lng:cLng,elev:null,
+      label:'T'+nodeCounter++,
+      pumpHead:0,waterLevel:2,
+      polygon:[...tankDrawPts]
+    };
+    nodes.push(node);
+  }
+  cancelTankDraw();
+  pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderNodeList();updateSummary();
+}
+function cancelTankDraw(){
+  tankDrawPts=[];reshapingTankId=null;
+  tankDrawMarkers.forEach(m=>m.remove());tankDrawMarkers=[];
+  if(tankGhostPolyline){tankGhostPolyline.remove();tankGhostPolyline=null;}
+}
+// Re-draw an existing tank's shape — triggered by clicking a tank while still in Node mode
+function reshapeTank(node){
+  if(!confirm(`Redraw the footprint for ${node.label||'this tank'}?\n\nClick to place new boundary points, double-click to finish. Existing pipes stay connected.`))return;
+  reshapingTankId=node.id;
+  tankDrawPts=[];
+  tankDrawMarkers.forEach(m=>m.remove());tankDrawMarkers=[];
+}
+window.reshapeTank=reshapeTank;
+
+// Called from the node edit panel's "Redraw footprint" button
+function reshapeSelectedTank(){
+  const node=nodes.find(n=>n.id===selectedNodeId);
+  if(!node||node.type!=='tank')return;
+  setMode('node');
+  reshapeTank(node);
+}
+window.reshapeSelectedTank=reshapeSelectedTank;
+
 // ── Finish pipe ────────────────────────────────────────
 function finishPipe(endNodeId){
   if(drawPts.length<2){drawPts=[];drawStartNodeId=null;drawMarkers.forEach(m=>m.remove());drawMarkers=[];return;}
@@ -1009,20 +1341,29 @@ function finishPipe(endNodeId){
   const waypoints=drawPts.slice(1,-1);
 
   // Resolve start node
-  let startNode;
+  let startNode, startAttachPt=null;
   if(drawStartNodeId) startNode=nodes.find(n=>n.id===drawStartNodeId);
   if(!startNode){const r=getOrCreateNode(firstPt[0],firstPt[1],null);startNode=r.node;}
+  if(startNode.type==='tank'){
+    const r=closestPointOnTankBoundary(startNode,firstPt[0],firstPt[1]);
+    startAttachPt=r.point;
+  }
 
   // Resolve end node
-  let endNode;
+  let endNode, endAttachPt=null;
   if(endNodeId) endNode=nodes.find(n=>n.id===endNodeId);
   if(!endNode){const r=getOrCreateNode(lastPt[0],lastPt[1],startNode.id);endNode=r.node;}
+  if(endNode.type==='tank'){
+    const r=closestPointOnTankBoundary(endNode,lastPt[0],lastPt[1]);
+    endAttachPt=r.point;
+  }
 
   const layer=document.getElementById('sel-layer').value;
   const pipe={
     id:'p'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
     label:'Pipe '+pipeCounter++,
     startNodeId:startNode.id,endNodeId:endNode.id,
+    startAttachPt,endAttachPt, // boundary point on tank if connected to one, else null
     waypoints,
     dia:document.getElementById('sel-dia').value,
     layer,
@@ -1945,17 +2286,51 @@ function pressureColor(h){
 function renderNodeMarkersWithPressure(nodeHeads){
   Object.values(nodeLeafletMarkers).forEach(m=>m.remove());
   for(const k in nodeLeafletMarkers)delete nodeLeafletMarkers[k];
+  Object.values(tankLeafletShapes).forEach(m=>m.remove());
+  for(const k in tankLeafletShapes)delete tankLeafletShapes[k];
   if(!layerVisible.nodes)return;
   nodes.forEach(node=>{
     const unconnected=isUnconnected(node);
     const h=nodeHeads?nodeHeads[node.id]:undefined;
     const col=unconnected?'#f87171':(h!==undefined?pressureColor(h):NODE_COLOR[node.type]||'#aaa');
     const lbl=NODE_LABEL[node.type]||'?';
+    const tooltip=h!==undefined?`${node.label}: ${h.toFixed(1)}m head`:(node.label||node.type);
+
+    if(node.type==='tank'){
+      const poly=ensureTankPolygon(node);
+      const isSel=node.id===selectedNodeId;
+      const shape=L.polygon(poly,{
+        color:col,weight:isSel?2.5:1.5,
+        fillColor:col,fillOpacity:isSel?0.4:0.28
+      }).addTo(map);
+      shape.bindTooltip(tooltip,{permanent:false,direction:'top'});
+      shape.on('click',e=>{
+        L.DomEvent.stopPropagation(e);
+        if(mode==='pipe') handleNodeClickWhileDrawing(node,e.latlng.lat,e.latlng.lng);
+        else if(mode==='select') selectNode(node.id);
+        else if(mode==='node') reshapeTank(node);
+      });
+      tankLeafletShapes[node.id]=shape;
+      const mk=L.marker([node.lat,node.lng],{
+        icon:L.divIcon({
+          html:`<div style="width:16px;height:16px;background:${col};border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;margin:-8px 0 0 -8px;box-shadow:0 1px 3px #0006">${unconnected?'!':'T'}</div>`,
+          className:'',iconSize:[16,16]
+        }),
+        zIndexOffset:1000
+      }).bindTooltip(tooltip,{permanent:false,direction:'top',offset:[0,-12]}).addTo(map);
+      mk.on('click',e=>{
+        L.DomEvent.stopPropagation(e);
+        if(mode==='pipe') handleNodeClickWhileDrawing(node);
+        else if(mode==='select') selectNode(node.id);
+      });
+      nodeLeafletMarkers[node.id]=mk;
+      return;
+    }
+
     const icon=L.divIcon({
       html:`<div style="width:22px;height:22px;background:${col};border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin:-11px 0 0 -11px;box-shadow:0 1px 4px #0006">${lbl}</div>`,
       className:'',iconSize:[22,22]
     });
-    const tooltip=h!==undefined?`${node.label}: ${h.toFixed(1)}m head`:(node.label||node.type);
     const mk=L.marker([node.lat,node.lng],{icon,zIndexOffset:1000})
       .bindTooltip(tooltip,{permanent:false,direction:'top',offset:[0,-13]})
       .addTo(map);
@@ -2000,7 +2375,9 @@ function pipeMidpoint(pipe){
   const sn=nodes.find(n=>n.id===pipe.startNodeId);
   const en=nodes.find(n=>n.id===pipe.endNodeId);
   if(!sn||!en)return null;
-  const allPts=[[sn.lat,sn.lng],...(pipe.waypoints||[]),[en.lat,en.lng]];
+  const startLL=pipe.startAttachPt||[sn.lat,sn.lng];
+  const endLL=pipe.endAttachPt||[en.lat,en.lng];
+  const allPts=[startLL,...(pipe.waypoints||[]),endLL];
   return allPts[Math.floor((allPts.length-1)/2)];
 }
 
