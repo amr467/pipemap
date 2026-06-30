@@ -240,6 +240,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
   <button onclick="switchProject()" style="height:24px;font-size:11px">Load</button>
   <div class="hdiv"></div>
   <button onclick="migrateSegments()" class="warn-act" title="Convert old pipe segments to node-edge model">&#8645; Migrate old data</button>
+  <button onclick="inspectOldData()" class="warn-act" title="See exactly what's stored under the old segments key, and check other possible locations">&#128269; Inspect old data</button>
   <button onclick="mergeNearbyNodes()" class="warn-act" title="Optional cleanup: merge junction nodes that are very close together">&#8645; Merge nearby nodes</button>
   <span style="font-size:11px;color:var(--text3);margin-left:4px">Share project name for live sync.</span>
 </div>
@@ -1164,19 +1165,89 @@ document.getElementById('nep-role')?.addEventListener('change',onNepRoleChange);
 window.onNepTypeChange=onNepTypeChange;
 
 // ── Migration of old data model ────────────────────────
-function migrateSegments(){
-  const oldRef=ref(db,'projects/'+projectId+'/segments');
+function inspectOldData(){
   import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js').then(({get})=>{
-    get(oldRef).then(snap=>{
-      const old=snap.val();
-      if(!old){alert('No old segments found to migrate.');return;}
-      const segs=Array.isArray(old)?old:Object.values(old);
-      if(!segs.length){alert('No old segments found.');return;}
+    const checks=[
+      {key:'segments',  label:'Old format v1 (segments)'},
+      {key:'data',      label:'Old format v0 (data.segments)'},
+      {key:'v2',        label:'Current format (v2: nodes/pipes)'}
+    ];
+    const results=[];
+    let pending=checks.length;
+
+    checks.forEach(c=>{
+      get(ref(db,'projects/'+projectId+'/'+c.key)).then(snap=>{
+        const val=snap.val();
+        let summary;
+        if(!val){
+          summary='— empty / not found';
+        } else if(c.key==='data'){
+          const segs=val.segments?(Array.isArray(val.segments)?val.segments:Object.values(val.segments)):[];
+          summary=`${segs.length} segment(s) nested under data.segments`;
+        } else if(c.key==='segments'){
+          const segs=Array.isArray(val)?val:Object.values(val);
+          summary=`${segs.length} segment(s)`;
+        } else if(c.key==='v2'){
+          const n=val.nodes?(Array.isArray(val.nodes)?val.nodes.length:Object.keys(val.nodes).length):0;
+          const p=val.pipes?(Array.isArray(val.pipes)?val.pipes.length:Object.keys(val.pipes).length):0;
+          summary=`${n} node(s), ${p} pipe(s)`;
+        }
+        results.push(`${c.label}:\n  ${summary}`);
+        pending--;
+        if(pending===0) showInspectResults(results);
+      }).catch(err=>{
+        results.push(`${c.label}:\n  error reading: ${err.message}`);
+        pending--;
+        if(pending===0) showInspectResults(results);
+      });
+    });
+  });
+}
+function showInspectResults(results){
+  alert(`Data found under project "${projectId}":\n\n${results.join('\n\n')}\n\nIf "Old format v1" shows far fewer segments than you expect, your real data may be sitting under a different project name — double check the Project field at the top, or it may have been overwritten by an earlier app version that auto-saved to this same key while you were testing the new node-edge tools.`);
+}
+window.inspectOldData=inspectOldData;
+
+
+function migrateSegments(){
+  Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js')
+  ]).then(([{get}])=>{
+    Promise.all([
+      get(ref(db,'projects/'+projectId+'/segments')),
+      get(ref(db,'projects/'+projectId+'/data'))
+    ]).then(([segSnap,dataSnap])=>{
+      // Collect segments from BOTH possible old locations:
+      //   projects/{id}/segments          — earliest format, direct array
+      //   projects/{id}/data.segments     — elevation-points era, nested
+      let segs=[];
+      const segVal=segSnap.val();
+      if(segVal){
+        segs=segs.concat(Array.isArray(segVal)?segVal:Object.values(segVal));
+      }
+      const dataVal=dataSnap.val();
+      if(dataVal&&dataVal.segments){
+        const nested=Array.isArray(dataVal.segments)?dataVal.segments:Object.values(dataVal.segments);
+        segs=segs.concat(nested);
+      }
+      // De-duplicate in case the same segment exists in both locations
+      // (compare by latlngs+dia+layer as a fingerprint since old segments had no stable id)
+      const seen=new Set();
+      segs=segs.filter(seg=>{
+        const fp=JSON.stringify(seg.latlngs)+'|'+seg.dia+'|'+seg.layer+'|'+seg.status;
+        if(seen.has(fp))return false;
+        seen.add(fp);return true;
+      });
+
+      if(!segs.length){
+        alert('No old segments found under either "segments" or "data.segments" for this project name.\n\nUse "Inspect old data" to see exactly what is stored, or double-check the Project field matches what you used before.');
+        return;
+      }
 
       let migrated=0, skippedMalformed=0;
       const malformedExamples=[];
 
-      if(!confirm(`Found ${segs.length} old segment(s). Migrate to node-edge model?\n\nEvery pipe keeps its own start/end node — nothing is merged or fused. This preserves the exact same map (existing + new layout). You can manually merge nodes into shared junctions afterward if you want a cleaner topology — that's optional.`))return;
+      if(!confirm(`Found ${segs.length} old segment(s) across both storage locations. Migrate to node-edge model?\n\nEvery pipe keeps its own start/end node — nothing is merged or fused. This preserves the exact same map (existing + new layout). You can manually merge nodes into shared junctions afterward if you want a cleaner topology — that's optional.`))return;
 
       pushHistory();
 
