@@ -2415,16 +2415,29 @@ function showUnconnectedCandOnMap(i){
 window.showUnconnectedCandOnMap=showUnconnectedCandOnMap;
 
 function approveSnapToNearby(i){
-  const c=unconnectedCandCache?.[i];if(!c)return;
+  const cached=unconnectedCandCache?.[i];if(!cached)return;
+
+  // Re-resolve against the live arrays, same reasoning as approveMidSpanSplit:
+  // cached objects may have been replaced wholesale by a Firebase sync
+  // between detection time and now.
+  const pipe=pipes.find(p=>p.id===cached.pipe.id);
+  const nearbyNode=nodes.find(n=>n.id===cached.nearbyNode.id);
+  if(!pipe||!nearbyNode){
+    alert('This candidate is no longer valid — refreshing the list.');
+    findUnconnectedNearbyNodes();
+    return;
+  }
+
   pushHistory();
-  if(c.end==='start') c.pipe.startNodeId=c.nearbyNode.id;
-  else c.pipe.endNodeId=c.nearbyNode.id;
-  // Clear any stale tank-boundary attach point — it no longer applies since
-  // the pipe now connects to a different node entirely.
-  if(c.end==='start') c.pipe.startAttachPt=null;
-  else c.pipe.endAttachPt=null;
+  if(cached.end==='start'){
+    pipe.startNodeId=nearbyNode.id;
+    pipe.startAttachPt=null;
+  } else {
+    pipe.endNodeId=nearbyNode.id;
+    pipe.endAttachPt=null;
+  }
   pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();updateSummary();
-  alert(`${c.pipe.label} (${c.end}) now connects to ${c.nearbyNode.label}.`);
+  alert(`${pipe.label} (${cached.end}) now connects to ${nearbyNode.label}.`);
   findUnconnectedNearbyNodes(); // refresh the list
 }
 window.approveSnapToNearby=approveSnapToNearby;
@@ -2526,10 +2539,31 @@ window.showMidSpanCandOnMap=showMidSpanCandOnMap;
 // floating point rounding), and danglingNode only moves by the snap
 // distance already shown to the user before they approved.
 function approveMidSpanSplit(i){
-  const c=midSpanCandCache?.[i];if(!c)return;
+  const cached=midSpanCandCache?.[i];if(!cached)return;
+
+  // Re-resolve everything by ID against the CURRENT live arrays — the
+  // cached objects from detection time may have been replaced wholesale
+  // by a Firebase sync in the interim (this app syncs in real time, so
+  // nodes/pipes arrays can be swapped out from under any cached reference
+  // at any moment). Mutating a stale object silently does nothing.
+  const danglingNode=nodes.find(n=>n.id===cached.danglingNode.id);
+  const throughPipe=pipes.find(p=>p.id===cached.throughPipe.id);
+  if(!danglingNode||!throughPipe){
+    alert('This candidate is no longer valid (the node or pipe it referred to has changed since the list was built). Refreshing the list — please try again.');
+    findMidSpanIntersections();
+    return;
+  }
+  // Recompute the closest point fresh too, in case the through-pipe's
+  // shape changed since detection.
+  const closest=closestPointOnPipe(throughPipe,danglingNode.lat,danglingNode.lng);
+  if(!closest){
+    alert('Could not recompute the connection point — this through-pipe may be missing a node. Refreshing the list.');
+    findMidSpanIntersections();
+    return;
+  }
+
   pushHistory();
 
-  const {danglingNode,throughPipe,closest}=c;
   const {point:splitPoint,segIndex,allPts}=closest;
 
   // New shared junction at the split point
@@ -2545,12 +2579,10 @@ function approveMidSpanSplit(i){
   const firstHalfPts=[...allPts.slice(0,segIndex+1),splitPoint];
   const secondHalfPts=[splitPoint,...allPts.slice(segIndex+1)];
 
-  const origStartNodeId=throughPipe.startNodeId;
   const origEndNodeId=throughPipe.endNodeId;
-  const origStartAttach=throughPipe.startAttachPt;
   const origEndAttach=throughPipe.endAttachPt;
 
-  // Piece A: original start -> new junction
+  // Piece A: original start -> new junction (mutate the live throughPipe object directly)
   throughPipe.endNodeId=junction.id;
   throughPipe.endAttachPt=null;
   throughPipe.waypoints=firstHalfPts.slice(1,-1);
@@ -2573,9 +2605,16 @@ function approveMidSpanSplit(i){
   };
   pipes.push(pieceB);
 
-  // Reconnect the dangling node's single pipe to the new junction
-  const danglingPipe=pipes.find(p=>p.startNodeId===danglingNode.id||p.endNodeId===danglingNode.id);
-  if(danglingPipe){
+  // Reconnect the dangling node's single pipe to the new junction.
+  // Search the live array, excluding throughPipe/pieceB themselves so we
+  // never accidentally grab the pipe we just split or just created.
+  const danglingPipe=pipes.find(p=>
+    p.id!==throughPipe.id && p.id!==pieceB.id &&
+    (p.startNodeId===danglingNode.id||p.endNodeId===danglingNode.id)
+  );
+  if(!danglingPipe){
+    alert(`Warning: could not find ${danglingNode.label}'s own pipe to reconnect. The split was still applied to ${throughPipe.label}, but you'll need to manually reconnect ${danglingNode.label} using the Reconnect tool.`);
+  } else {
     if(danglingPipe.startNodeId===danglingNode.id) danglingPipe.startNodeId=junction.id;
     else danglingPipe.endNodeId=junction.id;
   }
