@@ -2032,10 +2032,13 @@ function viewRawOldData(){
       const body=document.getElementById('modal-body');
       body.style.whiteSpace='normal';
       body.style.fontFamily='inherit';
-      body.innerHTML=`<div style="margin-bottom:8px;color:var(--text2)">Found ${segs.length} raw segment(s), sorted longest first. Click any row to see its full coordinates.</div>`+
+      body.innerHTML=`<div style="margin-bottom:8px;color:var(--text2)">Found ${segs.length} raw segment(s), sorted longest first. Click "Show on map" to see where it runs, or click the row for raw coordinates.</div>`+
         withLen.map(s=>
-          `<div onclick="showRawSegDetail(${s.idx})" style="padding:6px 8px;margin-bottom:3px;border-radius:4px;background:var(--surface2);cursor:pointer;border:1px solid var(--border)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">`+
-            `<b>${s.dia}"</b> &nbsp; ${s.len.toFixed(1)}m &nbsp; <span style="color:var(--text2)">${s.layer}/${s.status}</span> &nbsp; <span style="color:var(--text3);font-size:10px">${s.latlngs.length} points</span>`+
+          `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;margin-bottom:3px;border-radius:4px;background:var(--surface2);border:1px solid var(--border)">`+
+            `<div onclick="showRawSegDetail(${s.idx})" style="flex:1;cursor:pointer;">`+
+              `<b>${s.dia}"</b> &nbsp; ${s.len.toFixed(1)}m &nbsp; <span style="color:var(--text2)">${s.layer}/${s.status}</span> &nbsp; <span style="color:var(--text3);font-size:10px">${s.latlngs.length} points</span>`+
+            `</div>`+
+            `<button onclick="event.stopPropagation();showOldSegmentOnMap(rawOldSegsCache.find(x=>x.idx===${s.idx}));closeModal();" style="height:24px;padding:0 8px;font-size:10px;border-color:#fbbf24;color:#fbbf24;flex-shrink:0">&#9650; Show on map</button>`+
           `</div>`
         ).join('');
     }).catch(err=>{
@@ -2063,6 +2066,14 @@ function showRawSegDetail(idx){
   backBtn.textContent='← Back to list';
   backBtn.style.cssText='height:26px;padding:0 10px;font-size:12px;';
   backBtn.onclick=viewRawOldData;
+  const showBtn=document.createElement('button');
+  showBtn.textContent='&#9650; Show on map';
+  showBtn.innerHTML='&#9650; Show on map';
+  showBtn.style.cssText='height:26px;padding:0 10px;font-size:12px;border-color:#fbbf24;color:#fbbf24;';
+  showBtn.onclick=()=>{
+    showOldSegmentOnMap(target);
+    closeModal();
+  };
   const copyBtn=document.createElement('button');
   copyBtn.textContent='Copy coordinates';
   copyBtn.style.cssText='height:26px;padding:0 10px;font-size:12px;border-color:var(--accent);color:var(--accent);';
@@ -2073,9 +2084,62 @@ function showRawSegDetail(idx){
     });
   };
   footer.appendChild(backBtn);
+  footer.appendChild(showBtn);
   footer.appendChild(copyBtn);
 }
 window.showRawSegDetail=showRawSegDetail;
+
+// ── Show a recovered old segment as a highlighted overlay on the map ──
+let oldSegOverlay=null, oldSegEndMarkers=[];
+
+function showOldSegmentOnMap(target){
+  clearOldSegOverlay();
+  if(!target.latlngs||target.latlngs.length<2)return;
+
+  // Bright dashed yellow line, drawn above everything else, clearly
+  // distinguishable from any current pipe color so it can't be confused
+  // with real, already-mapped data.
+  oldSegOverlay=L.polyline(target.latlngs,{
+    color:'#fbbf24',weight:5,opacity:0.95,dashArray:'10,8',lineCap:'round'
+  }).addTo(map);
+  oldSegOverlay.bringToFront();
+
+  // Mark the two true endpoints distinctly so you know which end is which
+  const startPt=target.latlngs[0],endPt=target.latlngs[target.latlngs.length-1];
+  const mkEnd=(pt,label,color)=>L.marker(pt,{
+    icon:L.divIcon({
+      html:`<div style="width:18px;height:18px;background:${color};border:2px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000;margin:-9px 0 0 -9px;box-shadow:0 1px 4px #0008">${label}</div>`,
+      className:'',iconSize:[18,18]
+    }),zIndexOffset:2000
+  }).addTo(map);
+  oldSegEndMarkers.push(mkEnd(startPt,'S','#fbbf24'));
+  oldSegEndMarkers.push(mkEnd(endPt,'E','#fbbf24'));
+
+  map.fitBounds(oldSegOverlay.getBounds(),{padding:[60,60]});
+  showOldSegBanner(target);
+}
+
+function clearOldSegOverlay(){
+  if(oldSegOverlay){oldSegOverlay.remove();oldSegOverlay=null;}
+  oldSegEndMarkers.forEach(m=>m.remove());oldSegEndMarkers=[];
+  const banner=document.getElementById('old-seg-banner');
+  if(banner)banner.remove();
+}
+window.clearOldSegOverlay=clearOldSegOverlay;
+
+function showOldSegBanner(target){
+  const banner=document.createElement('div');
+  banner.id='old-seg-banner';
+  banner.style.cssText='position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1000;background:var(--surface);border:1px solid #fbbf24;border-radius:var(--radius);padding:8px 14px;font-size:12px;color:var(--text);box-shadow:0 2px 10px #0006;display:flex;align-items:center;gap:10px;';
+  banner.innerHTML=`<span>&#9650; Showing lost pipe: <b>${target.dia}", ${target.len.toFixed(1)}m, ${target.layer}/${target.status}</b> — S=start, E=end</span>`;
+  const closeBtn=document.createElement('button');
+  closeBtn.textContent='Hide';
+  closeBtn.style.cssText='height:22px;padding:0 8px;font-size:11px;';
+  closeBtn.onclick=clearOldSegOverlay;
+  banner.appendChild(closeBtn);
+  document.getElementById('map').appendChild(banner);
+}
+window.showOldSegmentOnMap=showOldSegmentOnMap;
 
 function mergeNearbyNodes(){
   const dist=parseFloat(prompt('Merge junction nodes within this distance (metres) of each other?\n\nOnly plain junctions (J) are merged — wells, tanks, pumps, and endpoints are never touched, so you never lose a source or destination by accident.','2'));
