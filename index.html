@@ -200,6 +200,16 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
 .p-green{color:#4ade80}.p-yellow{color:#fbbf24}.p-orange{color:#fb923c}.p-red{color:#f87171}.p-black{color:#aaa}
 /* Pipe hydraulics inputs */
 .hyd-pipe-input{display:flex;flex-direction:column;gap:4px;padding:6px 8px;background:var(--surface2);border-radius:var(--radius);margin-bottom:4px;font-size:11px}
+
+/* Sections / schedule */
+.section-row{display:flex;align-items:center;gap:7px;padding:6px 8px;background:var(--surface2);border-radius:var(--radius);margin-bottom:4px;font-size:11px}
+.section-swatch{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.section-name{flex:1;font-weight:500}
+.section-toggle{height:22px;padding:0 10px;font-size:10px;border-radius:11px;cursor:pointer;border:1px solid var(--border2);background:var(--surface)}
+.section-toggle.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.section-toggle.off{color:var(--text3)}
+.section-del{color:var(--text3);cursor:pointer;font-size:14px;padding:0 2px}
+.section-del:hover{color:var(--danger)}
 .hyd-pipe-input .pi-title{font-weight:500;color:var(--text);margin-bottom:2px}
 .hyd-pipe-input .pi-row{display:flex;align-items:center;gap:5px}
 .hyd-pipe-input .pi-row label{color:var(--text3);width:80px;flex-shrink:0;font-size:10px}
@@ -510,6 +520,9 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
           <div class="ep-row"><label>Booster head (m)</label>
             <input id="nep-tankpump" type="number" placeholder="0 = gravity" min="0" style="flex:1;height:24px;font-size:11px">
           </div>
+          <div class="ep-row"><label>Max outlet flow</label>
+            <input id="nep-tank-outflow" type="number" placeholder="m³/hr" min="0" style="flex:1;height:24px;font-size:11px">
+          </div>
           <button onclick="reshapeSelectedTank()" style="width:100%;height:24px;font-size:11px;margin-top:2px">&#9650; Redraw footprint</button>
         </div>
         <!-- Pump station fields -->
@@ -520,6 +533,15 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
           <div class="ep-row"><label>Pump flow (m³/hr)</label>
             <input id="nep-ps-flow" type="number" placeholder="e.g. 8" min="0" style="flex:1;height:24px;font-size:11px">
           </div>
+        </div>
+        <!-- Endpoint fields -->
+        <div id="nep-endpoint-fields" style="display:none">
+          <div class="ep-row"><label>Section</label>
+            <select id="nep-section">
+              <option value="">(use zone, if any)</option>
+            </select>
+          </div>
+          <div id="nep-section-resolved" style="font-size:10px;color:var(--text3);margin:-2px 0 4px 58px"></div>
         </div>
         <!-- Redundancy role — shown for wells, tanks, pump stations -->
         <div id="nep-role-row" style="display:none">
@@ -553,6 +575,11 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
       <div id="zone-analysis">
         <div class="za-title">Zone analysis</div>
         <div id="za-stats"></div>
+        <div class="za-inp-row" style="margin-bottom:6px"><label>Section</label>
+          <select id="za-section">
+            <option value="">(none)</option>
+          </select>
+        </div>
         <div class="za-pipes" id="za-pipes"></div>
         <div class="za-inputs">
           <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Feeder estimation</div>
@@ -573,27 +600,51 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
     <div id="tab-hydraulics" class="tab-pane">
       <div id="hyd-wrap">
         <div class="hyd-note">
-          Runs on <strong>new layout pipes only</strong>. Set source parameters and pipe service factors, then click Run. Uses Hazen-Williams friction formula with condition multipliers.
+          Flow is set only at sources (wells, tank outlets, pump stations). Every other pipe's flow is calculated from the network and which sections are active. Runs on <strong>new layout pipes only</strong>.
         </div>
+
         <div class="hyd-section">
-          <div class="hyd-section-title">Sources (wells &amp; tanks)</div>
+          <div class="hyd-section-title">Sources (wells, tanks &amp; pump stations)</div>
           <div id="hyd-sources-inputs"></div>
         </div>
+
         <div class="hyd-section">
-          <div class="hyd-section-title">Pipe parameters</div>
+          <div class="hyd-section-title">Pipe material &amp; condition</div>
           <div id="hyd-pipe-inputs"></div>
         </div>
+
+        <div class="hyd-section">
+          <div class="hyd-section-title">Irrigation sections</div>
+          <div id="hyd-note-sections" class="hyd-note">Group endpoints into sections (directly, or via a zone's Section field), then toggle which are active to model running different parts of the farm at different times.</div>
+          <div id="hyd-sections-list"></div>
+          <div style="display:flex;gap:5px;margin-top:6px">
+            <input type="text" id="new-section-name" placeholder="New section name" style="flex:1;height:26px;font-size:11px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);padding:0 7px">
+            <button onclick="addSection()" style="height:26px;font-size:11px">+ Add</button>
+          </div>
+          <div style="display:flex;gap:5px;margin-top:6px">
+            <button onclick="saveScheduleAs()" style="flex:1;height:24px;font-size:11px">&#128190; Save schedule as...</button>
+            <select id="load-schedule-select" onchange="loadSchedule(this.value)" style="flex:1;height:24px;font-size:11px">
+              <option value="">Load schedule...</option>
+            </select>
+          </div>
+        </div>
+
         <button class="hyd-run-btn" onclick="runHydraulics()">&#9654; Run hydraulic analysis</button>
+
         <div class="hyd-section" id="hyd-results-section" style="display:none">
-          <div class="hyd-section-title">Node pressures — Normal operation</div>
+          <div class="hyd-section-title">Node pressures — active sections only</div>
           <div id="hyd-node-results"></div>
+        </div>
+        <div class="hyd-section" id="hyd-reach-section" style="display:none">
+          <div class="hyd-section-title">Reach per source</div>
+          <div id="hyd-reach-results"></div>
         </div>
         <div class="hyd-section" id="hyd-redundancy-section" style="display:none">
           <div class="hyd-section-title">Redundancy scenarios</div>
           <div id="hyd-redundancy-results"></div>
         </div>
         <div class="hyd-section" id="hyd-pipe-results-section" style="display:none">
-          <div class="hyd-section-title">Pipe friction losses</div>
+          <div class="hyd-section-title">Pipe flow &amp; friction loss</div>
           <div id="hyd-pipe-results"></div>
         </div>
         <div class="hyd-section" id="hyd-warnings-section" style="display:none">
@@ -639,7 +690,9 @@ const db=getDatabase(fbApp);
 // NODES: {id, type:'well'|'tank'|'junction'|'endpoint', lat, lng, elev, label, pumpHead, waterLevel}
 // PIPES: {id, label, startNodeId, endNodeId, waypoints:[[lat,lng]...], dia, layer, status, condition}
 // ELEVPTS: {id, lat, lng, elev, label}
-let nodes=[], pipes=[], elevPts=[], zones=[];
+let nodes=[], pipes=[], elevPts=[], zones=[], sections=[];
+let schedules={}; // name -> {sectionId: activeBool, ...}
+let sectionCounter=1;
 let selectedPipeId=null, selectedNodeId=null, selectedZoneId=null;
 let mode='select';
 let layerVisible={existing:true,new:true,nodes:true,elev:true,zones:true};
@@ -1794,11 +1847,14 @@ function applyNodeEdit(){
   } else if(node.type==='tank'){
     node.waterLevel=parseFloat(document.getElementById('nep-wl')?.value)||2;
     node.pumpHead  =parseFloat(document.getElementById('nep-tankpump')?.value)||0;
+    node.maxOutletFlowM3h=parseFloat(document.getElementById('nep-tank-outflow')?.value)||0;
   } else if(node.type==='pump'){
     node.pumpHead   =parseFloat(document.getElementById('nep-ps-head')?.value)||0;
     node.pumpFlowM3h=parseFloat(document.getElementById('nep-ps-flow')?.value)||10;
+  } else if(node.type==='endpoint'){
+    node.sectionId=document.getElementById('nep-section')?.value||null;
   }
-  pushToFirebase();renderNodeMarkers();renderNodeList();updateSummary();
+  pushToFirebase();renderNodeMarkers();renderNodeList();updateSummary();renderSectionsList();
 }
 window.applyNodeEdit=applyNodeEdit;
 
@@ -1812,12 +1868,27 @@ window.deleteSelectedNode=deleteSelectedNode;
 
 function onNepTypeChange(){
   const t=document.getElementById('nep-type').value;
-  document.getElementById('nep-well-fields').style.display      =t==='well'?'':'none';
-  document.getElementById('nep-tank-fields').style.display      =t==='tank'?'':'none';
+  document.getElementById('nep-well-fields').style.display       =t==='well'?'':'none';
+  document.getElementById('nep-tank-fields').style.display       =t==='tank'?'':'none';
   document.getElementById('nep-pumpstation-fields').style.display=t==='pump'?'':'none';
+  document.getElementById('nep-endpoint-fields').style.display   =t==='endpoint'?'':'none';
   const hasRole=['well','tank','pump'].includes(t);
   document.getElementById('nep-role-row').style.display=hasRole?'':'none';
   if(hasRole) onNepRoleChange();
+  if(t==='endpoint') updateSectionResolvedHint();
+}
+function updateSectionResolvedHint(){
+  const node=nodes.find(n=>n.id===selectedNodeId);
+  const hint=document.getElementById('nep-section-resolved');
+  if(!node||!hint)return;
+  if(node.sectionId){hint.textContent='';return;}
+  const effId=effectiveSectionId(node);
+  if(effId){
+    const sec=sections.find(s=>s.id===effId);
+    hint.textContent=sec?`Currently inherits "${sec.label}" from a zone.`:'';
+  } else {
+    hint.textContent='Not in any section — will be treated as inactive.';
+  }
 }
 function onNepRoleChange(){
   const isStandby=document.getElementById('nep-role').value==='standby';
@@ -1829,6 +1900,7 @@ function onNepRoleChange(){
   }
 }
 document.getElementById('nep-type').addEventListener('change',onNepTypeChange);
+document.getElementById('nep-section')?.addEventListener('change',updateSectionResolvedHint);
 document.getElementById('nep-role')?.addEventListener('change',onNepRoleChange);
 window.onNepTypeChange=onNepTypeChange;
 
@@ -2270,19 +2342,20 @@ function mergeNearbyNodes(){
 window.mergeNearbyNodes=mergeNearbyNodes;
 
 // ── History ────────────────────────────────────────────
-function pushHistory(){history.push(JSON.parse(JSON.stringify({nodes,pipes,elevPts,zones})));if(history.length>40)history.shift();}
+function pushHistory(){history.push(JSON.parse(JSON.stringify({nodes,pipes,elevPts,zones,sections,schedules})));if(history.length>40)history.shift();}
 function undo(){
   if(!history.length)return;
   const s=history.pop();nodes=s.nodes;pipes=s.pipes;elevPts=s.elevPts;zones=s.zones||[];
+  sections=s.sections||[];schedules=s.schedules||{};
   selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;drawPts=[];drawStartNodeId=null;
   zonePts=[];zoneMarkers.forEach(m=>m.remove());zoneMarkers=[];
   drawMarkers.forEach(m=>m.remove());drawMarkers=[];
   pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();renderElevMarkers();renderZoneLayers();
 }
 function clearAll(){
-  if(!nodes.length&&!pipes.length&&!elevPts.length&&!zones.length)return;
-  if(!confirm('Clear all nodes, pipes, zones and elevation points?'))return;
-  pushHistory();nodes=[];pipes=[];elevPts=[];zones=[];selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;
+  if(!nodes.length&&!pipes.length&&!elevPts.length&&!zones.length&&!sections.length)return;
+  if(!confirm('Clear all nodes, pipes, zones, sections and elevation points?'))return;
+  pushHistory();nodes=[];pipes=[];elevPts=[];zones=[];sections=[];schedules={};selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;
   pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();renderElevMarkers();renderZoneLayers();
 }
 window.undo=undo;window.clearAll=clearAll;
@@ -2301,7 +2374,9 @@ function pushToFirebase(){
     nodes:nodes.length?nodes:null,
     pipes:pipes.length?pipes:null,
     elevPts:elevPts.length?elevPts:null,
-    zones:zones.length?zones:null
+    zones:zones.length?zones:null,
+    sections:sections.length?sections:null,
+    schedules:Object.keys(schedules).length?schedules:null
   }).then(()=>{setSyncStatus('synced');document.getElementById('save-status').textContent='Saved '+new Date().toLocaleTimeString();})
   .catch(()=>setSyncStatus('offline'));
 }
@@ -2311,11 +2386,13 @@ function subscribeToProject(){
   fbUnsub=onValue(dbRef(),snap=>{
     if(ignoreNext){ignoreNext=false;return;}
     const d=snap.val();
-    nodes  =d?.nodes  ?(Array.isArray(d.nodes)  ?d.nodes  :Object.values(d.nodes))  :[];
-    pipes  =d?.pipes  ?(Array.isArray(d.pipes)  ?d.pipes  :Object.values(d.pipes))  :[];
-    elevPts=d?.elevPts?(Array.isArray(d.elevPts)?d.elevPts:Object.values(d.elevPts)):[];
-    zones  =d?.zones  ?(Array.isArray(d.zones)  ?d.zones  :Object.values(d.zones))  :[];
-    nodeCounter=nodes.length+1;pipeCounter=pipes.length+1;elevCounter=elevPts.length+1;zoneCounter=zones.length+1;
+    nodes    =d?.nodes    ?(Array.isArray(d.nodes)    ?d.nodes    :Object.values(d.nodes))    :[];
+    pipes    =d?.pipes    ?(Array.isArray(d.pipes)    ?d.pipes    :Object.values(d.pipes))    :[];
+    elevPts  =d?.elevPts  ?(Array.isArray(d.elevPts)  ?d.elevPts  :Object.values(d.elevPts))  :[];
+    zones    =d?.zones    ?(Array.isArray(d.zones)    ?d.zones    :Object.values(d.zones))    :[];
+    sections =d?.sections ?(Array.isArray(d.sections) ?d.sections :Object.values(d.sections)) :[];
+    schedules=d?.schedules||{};
+    nodeCounter=nodes.length+1;pipeCounter=pipes.length+1;elevCounter=elevPts.length+1;zoneCounter=zones.length+1;sectionCounter=sections.length+1;
     selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;
     setSyncStatus('synced');
     document.getElementById('save-status').textContent='Live — '+new Date().toLocaleTimeString();
@@ -2325,7 +2402,7 @@ function subscribeToProject(){
 function switchProject(){
   const val=document.getElementById('project-id').value.trim().replace(/[^a-zA-Z0-9_-]/g,'_');
   if(!val){alert('Enter a valid project name.');return;}
-  projectId=val;nodes=[];pipes=[];elevPts=[];zones=[];selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;history=[];
+  projectId=val;nodes=[];pipes=[];elevPts=[];zones=[];sections=[];schedules={};selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;history=[];
   renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();renderElevMarkers();renderZoneLayers();
   subscribeToProject();
 }
@@ -2488,13 +2565,18 @@ function renderNodeList(){
     if(document.getElementById('nep-depth'))    document.getElementById('nep-depth').value   =sel.nominalDepth||30;
     if(document.getElementById('nep-drawdown')) document.getElementById('nep-drawdown').value=sel.drawdownFactor||0.15;
     // Tank
-    if(document.getElementById('nep-wl'))       document.getElementById('nep-wl').value      =sel.waterLevel||2;
-    if(document.getElementById('nep-tankpump')) document.getElementById('nep-tankpump').value=sel.pumpHead||0;
+    if(document.getElementById('nep-wl'))           document.getElementById('nep-wl').value          =sel.waterLevel||2;
+    if(document.getElementById('nep-tankpump'))     document.getElementById('nep-tankpump').value    =sel.pumpHead||0;
+    if(document.getElementById('nep-tank-outflow')) document.getElementById('nep-tank-outflow').value=sel.maxOutletFlowM3h||'';
     // Pump station
     if(document.getElementById('nep-ps-head'))  document.getElementById('nep-ps-head').value =sel.pumpHead||0;
     if(document.getElementById('nep-ps-flow'))  document.getElementById('nep-ps-flow').value =sel.pumpFlowM3h||10;
+    // Endpoint
+    if(document.getElementById('nep-section'))  document.getElementById('nep-section').value =sel.sectionId||'';
     // Role
     if(document.getElementById('nep-role'))     document.getElementById('nep-role').value    =sel.role||'primary';
+    populateSectionDropdowns();
+    if(document.getElementById('nep-section'))  document.getElementById('nep-section').value =sel.sectionId||'';
     onNepTypeChange();
     if(sel.coversNodeId&&document.getElementById('nep-covers')){
       document.getElementById('nep-covers').value=sel.coversNodeId;
@@ -2579,7 +2661,8 @@ function renderHydraulicsInputs(){
       } else if(node.type==='tank'){
         fields=`
           <div class="si-row"><label>Water level (m)</label><input type="number" id="hs-wl-${node.id}" value="${p.waterLevel??node.waterLevel??2}" min="0" step="0.1"></div>
-          <div class="si-row"><label>Booster head (m)</label><input type="number" id="hs-ph-${node.id}" value="${p.pumpHead??node.pumpHead??0}" min="0" step="1"></div>`;
+          <div class="si-row"><label>Booster head (m)</label><input type="number" id="hs-ph-${node.id}" value="${p.pumpHead??node.pumpHead??0}" min="0" step="1"></div>
+          <div class="si-row"><label>Max outlet flow (m³/hr)</label><input type="number" id="hs-of-${node.id}" value="${p.maxOutletFlowM3h??node.maxOutletFlowM3h??5}" min="0.1" step="0.5"></div>`;
       } else if(node.type==='pump'){
         fields=`
           <div class="si-row"><label>Pump head (m)</label><input type="number" id="hs-ph-${node.id}" value="${p.pumpHead??node.pumpHead??20}" min="0" step="1"></div>
@@ -2590,6 +2673,7 @@ function renderHydraulicsInputs(){
     });
   }
 
+  // Pipe inputs now only cover material/condition — flow is calculated, not entered.
   const pipeEl=document.getElementById('hyd-pipe-inputs');
   const newPipes=pipes.filter(p=>p.layer==='new');
   if(!newPipes.length){
@@ -2602,7 +2686,6 @@ function renderHydraulicsInputs(){
       const div=document.createElement('div');
       div.className='hyd-pipe-input';
       div.innerHTML=`<div class="pi-title">${pipe.label} <span style="color:var(--text3);font-size:10px">${sn?sn.label:'?'}→${en?en.label:'?'} · ${pipeLenM(pipe).toFixed(0)}m · ${pipe.dia}</span></div>`+
-        `<div class="pi-row"><label>Flow (m³/hr)</label><input type="number" id="hp-fl-${pipe.id}" value="${p.flowM3h??2}" min="0.01" step="0.1"></div>`+
         `<div class="pi-row"><label>Material</label>
           <select id="hp-mat-${pipe.id}">
             <option value="pvc-new"    ${(p.material||'pvc-new')==='pvc-new'?'selected':''}>PVC new (C=140)</option>
@@ -2624,6 +2707,10 @@ function renderHydraulicsInputs(){
       pipeEl.appendChild(div);
     });
   }
+
+  renderSectionsList();
+  populateSectionDropdowns();
+  populateScheduleDropdown();
 }
 
 function collectHydParams(){
@@ -2637,15 +2724,16 @@ function collectHydParams(){
     } else if(node.type==='tank'){
       p.waterLevel=parseFloat(document.getElementById('hs-wl-'+node.id)?.value)||2;
       p.pumpHead  =parseFloat(document.getElementById('hs-ph-'+node.id)?.value)||0;
+      p.maxOutletFlowM3h=parseFloat(document.getElementById('hs-of-'+node.id)?.value)||5;
     } else if(node.type==='pump'){
       p.pumpHead   =parseFloat(document.getElementById('hs-ph-'+node.id)?.value)||20;
       p.pumpFlowM3h=parseFloat(document.getElementById('hs-pf-'+node.id)?.value)||8;
     }
     hydSrcParams[node.id]=p;
   });
+  // Pipe params now only material/service-factor; flow is calculated elsewhere.
   pipes.filter(p=>p.layer==='new').forEach(pipe=>{
     hydPipeParams[pipe.id]={
-      flowM3h :parseFloat(document.getElementById('hp-fl-'+pipe.id)?.value)||2,
       material:document.getElementById('hp-mat-'+pipe.id)?.value||'unknown',
       sf      :parseFloat(document.getElementById('hp-sf-'+pipe.id)?.value)||0.7
     };
@@ -2676,9 +2764,107 @@ function sourceAvailableHead(node){
   return null;
 }
 
-// Core solver — given a set of active source node IDs, propagate head through new-layout pipes
-function solveNetwork(activeSourceIds){
+// Total flow a source can deliver (m³/hr). Wells/pumps: their pump rating.
+// Tanks: max outlet flow, since that's the physical constraint on a gravity
+// or lightly-boosted pool rather than a pump curve.
+function sourceFlowM3h(node){
+  const p=hydSrcParams[node.id]||{};
+  if(node.type==='well') return p.pumpFlowM3h||10;
+  if(node.type==='tank') return p.maxOutletFlowM3h||5;
+  if(node.type==='pump') return p.pumpFlowM3h||8;
+  return 0;
+}
+
+// ── Flow distribution: push each source's total flow through the network,
+// splitting proportionally to pipe capacity (cross-sectional area) at every
+// junction with more than one active downstream branch. Branches that lead
+// only to inactive/unassigned endpoints are pruned first so flow isn't
+// wasted modelling sections that aren't running.
+function pipeCapacityWeight(pipe){
+  const D=PIPE_DIA_M[pipe.dia]||0.051;
+  return D*D; // proportional to cross-sectional area (πD²/4, constant drops out of ratios)
+}
+
+// Determines which new-layout pipes can reach at least one active endpoint,
+// given the current section on/off state. Returns a Set of pipe ids.
+function activeReachablePipes(){
   const newPipes=pipes.filter(p=>p.layer==='new');
+  const activeSectionIds=new Set(sections.filter(s=>s.active).map(s=>s.id));
+  const activeEndpointIds=new Set(
+    nodes.filter(n=>n.type==='endpoint'&&activeSectionIds.has(effectiveSectionId(n))).map(n=>n.id)
+  );
+  if(!activeEndpointIds.size) return {pipes:new Set(),endpoints:activeEndpointIds};
+
+  // Build adjacency and walk backward from every active endpoint to find
+  // every pipe that lies on some path to it — this naturally prunes dead
+  // branches serving only inactive sections.
+  const adj={};
+  newPipes.forEach(pipe=>{
+    [pipe.startNodeId,pipe.endNodeId].forEach(nid=>{if(!adj[nid])adj[nid]=[];});
+    adj[pipe.startNodeId].push({pipe,neighbourId:pipe.endNodeId});
+    adj[pipe.endNodeId].push({pipe,neighbourId:pipe.startNodeId});
+  });
+  const reachablePipes=new Set();
+  const visited=new Set();
+  const queue=[...activeEndpointIds];
+  visited.forEach(()=>{}); // no-op, keeps linter happy about unused
+  const seen=new Set(queue);
+  while(queue.length){
+    const nid=queue.shift();
+    (adj[nid]||[]).forEach(({pipe,neighbourId})=>{
+      reachablePipes.add(pipe.id);
+      if(!seen.has(neighbourId)){seen.add(neighbourId);queue.push(neighbourId);}
+    });
+  }
+  return {pipes:reachablePipes,endpoints:activeEndpointIds};
+}
+
+// Distributes each active source's flow through the pruned, active-only
+// subnetwork, splitting proportionally by pipe capacity at junctions with
+// multiple active downstream branches. Returns pipeId -> flowM3h.
+function distributeFlow(activeSourceIds,reachablePipeIds){
+  const flowByPipe={};
+  const newPipes=pipes.filter(p=>p.layer==='new'&&reachablePipeIds.has(p.id));
+  const adj={};
+  newPipes.forEach(pipe=>{
+    [pipe.startNodeId,pipe.endNodeId].forEach(nid=>{if(!adj[nid])adj[nid]=[];});
+    adj[pipe.startNodeId].push({pipe,neighbourId:pipe.endNodeId});
+    adj[pipe.endNodeId].push({pipe,neighbourId:pipe.startNodeId});
+  });
+
+  activeSourceIds.forEach(srcId=>{
+    const srcNode=nodes.find(n=>n.id===srcId);
+    if(!srcNode)return;
+    const totalFlow=sourceFlowM3h(srcNode);
+    if(totalFlow<=0)return;
+
+    // BFS outward from this source, pushing flow proportionally at each
+    // branch point. visited prevents loops/double counting along any
+    // single path from this source.
+    const visited=new Set([srcId]);
+    const queue=[{nodeId:srcId,flow:totalFlow}];
+    while(queue.length){
+      const {nodeId,flow}=queue.shift();
+      const branches=(adj[nodeId]||[]).filter(({neighbourId})=>!visited.has(neighbourId));
+      if(!branches.length)continue;
+      const totalWeight=branches.reduce((a,b)=>a+pipeCapacityWeight(b.pipe),0);
+      branches.forEach(({pipe,neighbourId})=>{
+        const share=totalWeight>0?pipeCapacityWeight(pipe)/totalWeight:1/branches.length;
+        const branchFlow=flow*share;
+        flowByPipe[pipe.id]=(flowByPipe[pipe.id]||0)+branchFlow;
+        visited.add(neighbourId);
+        queue.push({nodeId:neighbourId,flow:branchFlow});
+      });
+    }
+  });
+  return flowByPipe;
+}
+
+// Core solver — given a set of active source node IDs and the computed
+// flow per pipe (from distributeFlow), propagate head through the active,
+// reachable subset of new-layout pipes only.
+function solveNetwork(activeSourceIds,flowByPipe,reachablePipeIds){
+  const newPipes=pipes.filter(p=>p.layer==='new'&&(!reachablePipeIds||reachablePipeIds.has(p.id)));
   // Build adjacency
   const adj={};
   newPipes.forEach(pipe=>{
@@ -2727,8 +2913,9 @@ function solveNetwork(activeSourceIds){
       const valveFactor=pipe.valveState==='partial'?(pipe.valvePercent||50)/100:1;
       const nb=nodes.find(n=>n.id===neighbourId);
       const nbElev=nb?.elev||0;
-      const pp=hydPipeParams[pipe.id]||{flowM3h:2,material:'unknown',sf:0.7};
-      const Q=(pp.flowM3h/3600)*valveFactor;
+      const pp=hydPipeParams[pipe.id]||{material:'unknown',sf:0.7};
+      const flowM3h=(flowByPipe&&flowByPipe[pipe.id])||0;
+      const Q=(flowM3h/3600)*valveFactor;
       const D=PIPE_DIA_M[pipe.dia]||0.051;
       const C=HW_C[pp.material]||80;
       const L=pipeLenM(pipe);
@@ -2740,7 +2927,7 @@ function solveNetwork(activeSourceIds){
       }
       const elevDelta=nbElev-curElev;
       const arrival=outHead-friction-trans-elevDelta;
-      if(!pipeLosses[pipe.id]) pipeLosses[pipe.id]={friction,transition:trans,elevChange:elevDelta};
+      if(!pipeLosses[pipe.id]) pipeLosses[pipe.id]={friction,transition:trans,elevChange:elevDelta,flowM3h};
       if(nodeHeads[neighbourId]===undefined||arrival>nodeHeads[neighbourId]){
         nodeHeads[neighbourId]=arrival;
         queue.push({nodeId:neighbourId,head:arrival,prevDia:pipe.dia});
@@ -2771,15 +2958,25 @@ function runHydraulics(){
   const srcNodes=nodes.filter(n=>['well','tank'].includes(n.type));
   if(!srcNodes.length){alert('No source nodes (wells or tanks) found.');return;}
 
+  if(!sections.length){alert('No irrigation sections defined yet. Add at least one section and assign endpoints to it (directly, or via a zone) before running.');return;}
+  if(!sections.some(s=>s.active)){alert('No sections are currently active. Toggle at least one section ON before running.');return;}
+
+  // ── Prune to active, reachable subnetwork ──
+  const {pipes:reachablePipeIds,endpoints:activeEndpointIds}=activeReachablePipes();
+  if(!activeEndpointIds.size){alert('No endpoints are in an active section. Assign endpoints to a section (or a zone with a section set) first.');return;}
+  if(!reachablePipeIds.size){alert('No pipes connect to any active endpoint. Check your network topology.');return;}
+
   // ── Normal operation: all primary sources active ──
   const primarySrcs=srcNodes.filter(n=>n.role!=='standby').map(n=>n.id);
-  const {nodeHeads:normalHeads,pipeLosses}=solveNetwork(primarySrcs.length?primarySrcs:srcNodes.map(n=>n.id));
+  const activeSrcIds=primarySrcs.length?primarySrcs:srcNodes.map(n=>n.id);
+  const flowByPipe=distributeFlow(activeSrcIds,reachablePipeIds);
+  const {nodeHeads:normalHeads,pipeLosses}=solveNetwork(activeSrcIds,flowByPipe,reachablePipeIds);
   lastHydHeads=normalHeads;
 
-  // ── Render normal results ──
-  const newNodeIds=new Set();
-  newPipes.forEach(p=>{newNodeIds.add(p.startNodeId);newNodeIds.add(p.endNodeId);});
-  const sortedNodes=[...newNodeIds].map(nid=>nodes.find(n=>n.id===nid)).filter(Boolean)
+  // ── Render normal results — only nodes on the active/reachable subnetwork ──
+  const activeNodeIds=new Set();
+  newPipes.filter(p=>reachablePipeIds.has(p.id)).forEach(p=>{activeNodeIds.add(p.startNodeId);activeNodeIds.add(p.endNodeId);});
+  const sortedNodes=[...activeNodeIds].map(nid=>nodes.find(n=>n.id===nid)).filter(Boolean)
     .sort((a,b)=>(normalHeads[b.id]??-999)-(normalHeads[a.id]??-999));
 
   const nodeResEl=document.getElementById('hyd-node-results');
@@ -2793,6 +2990,39 @@ function runHydraulics(){
     nodeResEl.appendChild(div);
   });
 
+  // ── Reach per source: furthest active endpoint each source still
+  // delivers positive head to, and the first point along its longest path
+  // where head crosses zero (the practical limit of "how far does it reach").
+  const reachEl=document.getElementById('hyd-reach-results');
+  reachEl.innerHTML='';
+  srcNodes.forEach(src=>{
+    const reachableEndpoints=[...activeEndpointIds]
+      .map(eid=>nodes.find(n=>n.id===eid))
+      .filter(Boolean)
+      .map(ep=>({ep,head:normalHeads[ep.id]}))
+      .filter(r=>r.head!==undefined);
+    if(!reachableEndpoints.length){
+      reachEl.innerHTML+=`<div class="hyd-node-row"><div class="hn-label">${src.label}</div><div class="hn-val p-black">no active endpoints reached</div></div>`;
+      return;
+    }
+    const positiveHead=reachableEndpoints.filter(r=>r.head>0);
+    const furthestOk=positiveHead.length
+      ?positiveHead.reduce((best,r)=>{
+        const d=haversineM([src.lat,src.lng],[r.ep.lat,r.ep.lng]);
+        return (!best||d>best.dist)?{ep:r.ep,head:r.head,dist:d}:best;
+      },null)
+      :null;
+    const anyNegative=reachableEndpoints.some(r=>r.head<=0);
+    const div=document.createElement('div');
+    div.className='hyd-node-row';
+    div.innerHTML=`<div class="hn-label">${src.label}</div>`+
+      `<div class="hn-val ${furthestOk?headClass(furthestOk.head):'p-black'}">`+
+      (furthestOk?`reaches ${furthestOk.ep.label} (${furthestOk.dist.toFixed(0)}m, ${furthestOk.head.toFixed(1)}m head)`:'cannot maintain pressure to any active endpoint')+
+      (anyNegative?' <span style="color:var(--danger)">· some endpoints beyond reach</span>':'')+
+      `</div>`;
+    reachEl.appendChild(div);
+  });
+
   // ── Redundancy scenarios ──
   const redEl=document.getElementById('hyd-redundancy-results');
   redEl.innerHTML='';
@@ -2800,17 +3030,16 @@ function runHydraulics(){
 
   if(failScenarios.length>1){
     failScenarios.forEach(failedSrc=>{
-      // Find standby that covers this source
       const standby=nodes.find(n=>n.role==='standby'&&n.coversNodeId===failedSrc.id);
-      const activeSrcs=srcNodes
-        .filter(n=>n.id!==failedSrc.id)
-        .map(n=>n.id);
-      if(standby) activeSrcs.push(standby.id);
-      const {nodeHeads:failHeads}=solveNetwork(activeSrcs);
+      const scenarioSrcs=srcNodes.filter(n=>n.id!==failedSrc.id).map(n=>n.id);
+      if(standby) scenarioSrcs.push(standby.id);
+      const scenarioFlow=distributeFlow(scenarioSrcs,reachablePipeIds);
+      const {nodeHeads:failHeads}=solveNetwork(scenarioSrcs,scenarioFlow,reachablePipeIds);
 
-      const minH=Math.min(...[...newNodeIds].map(nid=>failHeads[nid]??Infinity).filter(h=>isFinite(h)));
-      const failCount=[...newNodeIds].filter(nid=>(failHeads[nid]??-1)<1).length;
-      const cls=minH>5?'c-ok':minH>1?'c-warn':'c-buy';
+      const relevant=[...activeNodeIds].map(nid=>failHeads[nid]).filter(h=>h!==undefined);
+      const minH=relevant.length?Math.min(...relevant):NaN;
+      const failCount=[...activeNodeIds].filter(nid=>(failHeads[nid]??-1)<1).length;
+      const cls=isFinite(minH)?(minH>5?'c-ok':minH>1?'c-warn':'c-buy'):'c-warn';
 
       const row=document.createElement('div');
       row.className='hyd-node-row';
@@ -2823,15 +3052,15 @@ function runHydraulics(){
     redEl.innerHTML='<div style="font-size:11px;color:var(--text3)">Add multiple source nodes to see redundancy scenarios.</div>';
   }
 
-  // ── Pipe losses ──
+  // ── Pipe flows & losses ──
   const pipeResEl=document.getElementById('hyd-pipe-results');
   pipeResEl.innerHTML='';
-  newPipes.forEach(pipe=>{
+  newPipes.filter(p=>reachablePipeIds.has(p.id)).forEach(pipe=>{
     const pl=pipeLosses[pipe.id];if(!pl)return;
     const total=pl.friction+pl.transition;
     const div=document.createElement('div');
     div.className='hyd-pipe-row';
-    div.innerHTML=`<div><div style="font-weight:500;color:var(--text)">${pipe.label}</div>`+
+    div.innerHTML=`<div><div style="font-weight:500;color:var(--text)">${pipe.label} <span style="color:var(--text3);font-size:10px">${(pl.flowM3h||0).toFixed(2)} m³/hr</span></div>`+
       `<div class="hp-label">friction ${pl.friction.toFixed(2)}m · trans ${pl.transition.toFixed(2)}m · elev Δ${pl.elevChange?.toFixed(1)||'?'}m</div></div>`+
       `<div style="font-weight:600;color:${total>5?'#f87171':'#4ade80'}">${total.toFixed(2)}m</div>`;
     pipeResEl.appendChild(div);
@@ -2839,20 +3068,24 @@ function runHydraulics(){
 
   // ── Warnings ──
   const warnings=[];
-  newNodeIds.forEach(nid=>{
+  activeNodeIds.forEach(nid=>{
     const node=nodes.find(n=>n.id===nid);if(!node)return;
     const h=normalHeads[nid];
-    if(h===undefined) warnings.push(`${node.label||nid}: not reached by any source`);
+    if(h===undefined) warnings.push(`${node.label||nid}: not reached by any active source`);
     else if(h<=0) warnings.push(`${node.label||nid}: no pressure (${h.toFixed(1)}m) — add booster pump`);
     else if(h<3) warnings.push(`${node.label||nid}: very low head (${h.toFixed(1)}m)`);
   });
-  newPipes.forEach(pipe=>{
-    const pp=hydPipeParams[pipe.id]||{};
-    const Q=(pp.flowM3h||2)/3600;
+  // Flag inactive endpoints with no section, since they're silently excluded
+  const unassigned=nodes.filter(n=>n.type==='endpoint'&&!effectiveSectionId(n));
+  if(unassigned.length) warnings.push(`${unassigned.length} endpoint(s) have no section assigned — excluded from this run entirely.`);
+
+  newPipes.filter(p=>reachablePipeIds.has(p.id)).forEach(pipe=>{
+    const flowM3h=flowByPipe[pipe.id]||0;
+    const Q=flowM3h/3600;
     const D=PIPE_DIA_M[pipe.dia]||0.051;
     const v=Q/(Math.PI*(D/2)**2);
     if(v>3) warnings.push(`${pipe.label}: velocity ${v.toFixed(1)} m/s — too high, upsize pipe`);
-    if(v<0.3) warnings.push(`${pipe.label}: velocity ${v.toFixed(1)} m/s — too low, sediment risk`);
+    if(v<0.3&&flowM3h>0) warnings.push(`${pipe.label}: velocity ${v.toFixed(1)} m/s — too low, sediment risk`);
   });
   const warnEl=document.getElementById('hyd-warnings');
   warnEl.innerHTML=warnings.length
@@ -2860,6 +3093,7 @@ function runHydraulics(){
     :'<div style="font-size:11px;color:var(--accent)">✓ No warnings</div>';
 
   document.getElementById('hyd-results-section').style.display='';
+  document.getElementById('hyd-reach-section').style.display='';
   document.getElementById('hyd-redundancy-section').style.display='';
   document.getElementById('hyd-pipe-results-section').style.display='';
   document.getElementById('hyd-warnings-section').style.display='';
@@ -2982,6 +3216,120 @@ function pipesInZone(zone){
   });
 }
 
+// ── Irrigation sections ────────────────────────────────
+const SECTION_COLORS=['#4ade80','#60a5fa','#f97316','#c084fc','#fbbf24','#e879f9','#a3e635','#f87171'];
+
+// An endpoint's effective section: its own explicit assignment wins; if
+// unset, fall back to whichever zone polygon (with a section set) it falls
+// inside; if neither, it's unassigned and never treated as active.
+function effectiveSectionId(node){
+  if(node.sectionId) return node.sectionId;
+  for(const zone of zones){
+    if(zone.sectionId && pointInPolygon([node.lat,node.lng],zone.polygon)) return zone.sectionId;
+  }
+  return null;
+}
+
+function addSection(){
+  const input=document.getElementById('new-section-name');
+  const name=input.value.trim();
+  if(!name){alert('Enter a section name first.');return;}
+  pushHistory();
+  const section={
+    id:'sec'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    label:name,
+    color:SECTION_COLORS[sections.length%SECTION_COLORS.length],
+    active:true
+  };
+  sections.push(section);
+  input.value='';
+  pushToFirebase();renderSectionsList();renderHydraulicsInputs();populateSectionDropdowns();
+}
+window.addSection=addSection;
+
+function toggleSection(id){
+  const sec=sections.find(s=>s.id===id);if(!sec)return;
+  sec.active=!sec.active;
+  pushToFirebase();renderSectionsList();
+}
+window.toggleSection=toggleSection;
+
+function deleteSection(id){
+  if(!confirm('Delete this section? Endpoints assigned to it will become unassigned (inactive).'))return;
+  pushHistory();
+  sections=sections.filter(s=>s.id!==id);
+  // Clear references from endpoints and zones so nothing points at a dead section
+  nodes.forEach(n=>{if(n.sectionId===id)n.sectionId=null;});
+  zones.forEach(z=>{if(z.sectionId===id)z.sectionId=null;});
+  pushToFirebase();renderSectionsList();renderNodeList();renderZoneList();populateSectionDropdowns();
+}
+window.deleteSection=deleteSection;
+
+function renderSectionsList(){
+  const el=document.getElementById('hyd-sections-list');
+  if(!el)return;
+  if(!sections.length){el.innerHTML='<div style="font-size:11px;color:var(--text3)">No sections yet — add one below.</div>';return;}
+  el.innerHTML=sections.map(s=>{
+    const epCount=nodes.filter(n=>n.type==='endpoint'&&effectiveSectionId(n)===s.id).length;
+    return `<div class="section-row">`+
+      `<div class="section-swatch" style="background:${s.color}"></div>`+
+      `<div class="section-name">${s.label} <span style="color:var(--text3);font-size:10px">(${epCount} endpoint${epCount===1?'':'s'})</span></div>`+
+      `<div class="section-toggle ${s.active?'on':'off'}" onclick="toggleSection('${s.id}')">${s.active?'ON':'OFF'}</div>`+
+      `<span class="section-del" onclick="deleteSection('${s.id}')">×</span>`+
+    `</div>`;
+  }).join('');
+}
+
+// Keeps the endpoint edit panel's and zone edit panel's section dropdowns
+// in sync with the current sections list. Called whenever sections change.
+function populateSectionDropdowns(){
+  const opts=sections.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
+  const epSel=document.getElementById('nep-section');
+  if(epSel){
+    const cur=epSel.value;
+    epSel.innerHTML='<option value="">(use zone, if any)</option>'+opts;
+    if([...epSel.options].some(o=>o.value===cur)) epSel.value=cur;
+  }
+  const zoneSel=document.getElementById('za-section');
+  if(zoneSel){
+    const cur=zoneSel.value;
+    zoneSel.innerHTML='<option value="">(none)</option>'+opts;
+    if([...zoneSel.options].some(o=>o.value===cur)) zoneSel.value=cur;
+  }
+}
+window.populateSectionDropdowns=populateSectionDropdowns;
+
+// ── Schedules: named on/off combinations of sections ───
+function saveScheduleAs(){
+  const name=prompt('Name this schedule (e.g. "Morning — Zones A+B"):');
+  if(!name||!name.trim())return;
+  const snapshot={};
+  sections.forEach(s=>{snapshot[s.id]=s.active;});
+  schedules[name.trim()]=snapshot;
+  pushToFirebase();populateScheduleDropdown();
+  alert(`Saved schedule "${name.trim()}".`);
+}
+window.saveScheduleAs=saveScheduleAs;
+
+function loadSchedule(name){
+  if(!name||!schedules[name])return;
+  const snapshot=schedules[name];
+  sections.forEach(s=>{
+    if(snapshot.hasOwnProperty(s.id)) s.active=snapshot[s.id];
+  });
+  pushToFirebase();renderSectionsList();
+}
+window.loadSchedule=loadSchedule;
+
+function populateScheduleDropdown(){
+  const sel=document.getElementById('load-schedule-select');
+  if(!sel)return;
+  const names=Object.keys(schedules);
+  sel.innerHTML='<option value="">Load schedule...</option>'+
+    names.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+window.populateScheduleDropdown=populateScheduleDropdown;
+
 let ghostPolyline=null;
 function renderZoneGhost(){
   if(ghostPolyline){ghostPolyline.remove();ghostPolyline=null;}
@@ -3077,8 +3425,17 @@ function renderZoneList(){
     document.getElementById('za-emitters').value =sel.emittersPerTree||2;
     document.getElementById('za-lhr').value      =sel.lhrPerEmitter||4;
     document.getElementById('za-result').style.display='none';
+    populateSectionDropdowns();
+    document.getElementById('za-section').value=sel.sectionId||'';
   } else za.classList.remove('visible');
 }
+
+function setZoneSection(){
+  const sel=zones.find(z=>z.id===selectedZoneId);if(!sel)return;
+  sel.sectionId=document.getElementById('za-section').value||null;
+  pushToFirebase();renderSectionsList();renderZoneList();
+}
+document.getElementById('za-section')?.addEventListener('change',setZoneSection);
 
 function runZoneEstimate(){
   const sel=zones.find(z=>z.id===selectedZoneId);if(!sel)return;
