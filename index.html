@@ -243,6 +243,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
   <div class="hdiv"></div>
   <button onclick="migrateSegments()" class="warn-act" title="Convert old pipe segments to node-edge model">&#8645; Migrate old data</button>
   <button onclick="inspectOldData()" class="warn-act" title="See exactly what's stored under the old segments key, and check other possible locations">&#128269; Inspect old data</button>
+  <button onclick="viewRawOldData()" class="warn-act" title="List every raw old segment with full coordinates, to recover a specific lost pipe">&#128269; View raw old segments</button>
   <button onclick="mergeNearbyNodes()" class="warn-act" title="Optional cleanup: merge junction nodes that are very close together">&#8645; Merge nearby nodes</button>
   <span style="font-size:11px;color:var(--text3);margin-left:4px">Share project name for live sync.</span>
 </div>
@@ -1960,6 +1961,60 @@ function migrateSegments(){
   });
 }
 window.migrateSegments=migrateSegments;
+
+// Reads the raw old segment data (same two locations migration checks) and
+// lists every segment with its computed length, diameter, status, and full
+// coordinate array — so a specific lost pipe can be identified by its real
+// length/shape and recovered directly, rather than redrawn from memory.
+function viewRawOldData(){
+  import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js').then(({get})=>{
+    Promise.all([
+      get(ref(db,'projects/'+projectId+'/segments')),
+      get(ref(db,'projects/'+projectId+'/data'))
+    ]).then(([segSnap,dataSnap])=>{
+      let segs=[];
+      const segVal=segSnap.val();
+      if(segVal) segs=segs.concat(Array.isArray(segVal)?segVal:Object.values(segVal));
+      const dataVal=dataSnap.val();
+      if(dataVal&&dataVal.segments){
+        const nested=Array.isArray(dataVal.segments)?dataVal.segments:Object.values(dataVal.segments);
+        segs=segs.concat(nested);
+      }
+      if(!segs.length){alert('No raw old data found under "segments" or "data.segments" for this project.');return;}
+
+      // Compute length for each using the same haversine logic as everywhere else
+      const withLen=segs.map((seg,i)=>{
+        const pts=seg.latlngs||[];
+        let len=0;
+        for(let j=0;j<pts.length-1;j++) len+=haversineM(pts[j],pts[j+1]);
+        return {idx:i,dia:seg.dia,layer:seg.layer,status:seg.status,len,latlngs:pts};
+      });
+
+      // Show a summary list first, sorted longest-first so the big lost
+      // pipes (1124m, 422.6m) are easy to spot at the top.
+      withLen.sort((a,b)=>b.len-a.len);
+      const summary=withLen.map(s=>
+        `[${s.idx}] ${s.dia}", ${s.len.toFixed(1)}m, ${s.layer}/${s.status}, ${s.latlngs.length} points`
+      ).join('\n');
+
+      const pick=prompt(
+        `Found ${segs.length} raw old segment(s). Listed longest-first below.\n\n`+
+        `Enter the [index] number of the one you want to recover (its full coordinates will be shown next), or Cancel to just read this list:\n\n`+
+        summary
+      );
+      if(pick===null||pick.trim()==='')return;
+      const idx=parseInt(pick,10);
+      const target=withLen.find(s=>s.idx===idx);
+      if(!target){alert('Invalid index.');return;}
+
+      const coordList=target.latlngs.map(p=>`[${p[0].toFixed(6)}, ${p[1].toFixed(6)}]`).join(',\n');
+      alert(`Segment [${target.idx}] — ${target.dia}", ${target.len.toFixed(1)}m, ${target.layer}/${target.status}\n\n`+
+        `Raw coordinates (lat, lng) — ${target.latlngs.length} points:\n${coordList}\n\n`+
+        `You can use these to manually re-trace this pipe: open Google Maps or Google Earth, drop pins at these exact coordinates to see where it runs on the ground, then redraw it in PipeMap's Pipe mode following the same path.`);
+    }).catch(err=>alert('Failed to read old data: '+err.message));
+  });
+}
+window.viewRawOldData=viewRawOldData;
 
 function mergeNearbyNodes(){
   const dist=parseFloat(prompt('Merge junction nodes within this distance (metres) of each other?\n\nOnly plain junctions (J) are merged — wells, tanks, pumps, and endpoints are never touched, so you never lose a source or destination by accident.','2'));
