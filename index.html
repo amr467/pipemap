@@ -156,6 +156,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
 /* ── Zones ── */
 .lt-pill.on-zones{background:#1a1a0a;border-color:#a8850a;color:#fbbf24}
 #btn-hierarchy.active{background:#0a1a2a;border-color:#3080c8;color:#60a5fa}
+#btn-trace-pipe.active{background:#2a1a3d;border-color:#a855f7;color:#c084fc}
 #tab-zones{flex-direction:column}
 #zone-wrap{padding:10px 12px;flex:1;overflow-y:auto}
 .zone-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:3px;font-size:11px;cursor:pointer;background:var(--surface2)}
@@ -475,6 +476,11 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
         <div id="reconnect-hint" style="display:none;font-size:10px;color:var(--warn);margin-top:5px;padding:5px 7px;background:var(--warn-bg);border-radius:var(--radius)">
           Click a node or tank on the map to reconnect, or press Escape to cancel.
         </div>
+        <div class="ep-row" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border)">
+          <label style="width:auto">Connectivity</label>
+        </div>
+        <button id="btn-trace-pipe" onclick="togglePipeTrace()" style="width:100%;height:24px;font-size:11px;border-color:#a855f7;color:#a855f7">&#9737; Trace to source &amp; endpoint</button>
+        <div id="pipe-trace-summary" style="display:none;margin-top:5px;padding:5px 7px;background:var(--surface);border-radius:var(--radius)"></div>
         <div class="ep-actions" style="margin-top:8px">
           <button class="ep-apply" onclick="applyPipeEdit()">&#10003; Apply</button>
           <button class="danger"   onclick="deleteSelectedPipe()">&#215; Delete</button>
@@ -691,6 +697,7 @@ const db=getDatabase(fbApp);
 // PIPES: {id, label, startNodeId, endNodeId, waypoints:[[lat,lng]...], dia, layer, status, condition}
 // ELEVPTS: {id, lat, lng, elev, label}
 let nodes=[], pipes=[], elevPts=[], zones=[], sections=[];
+let pipeTraceOn=false, pipeTraceResult=null; // {toSourcePipeIds, toEndpointPipeIds, sourceFound, endpointFound}
 let schedules={}; // name -> {sectionId: activeBool, ...}
 let sectionCounter=1;
 let selectedPipeId=null, selectedNodeId=null, selectedZoneId=null;
@@ -851,7 +858,29 @@ const PipeLayer=L.Layer.extend({
       }
     }
 
+    // Connectivity trace overlay — when on, fade everything not on the
+    // traced path so the source-path and endpoint-path stand out clearly.
+    let traceGlow=null; // 'source' | 'endpoint' | 'both' | null
+    if(pipeTraceOn&&pipeTraceResult){
+      const onSourcePath=pipeTraceResult.toSourcePipeIds.has(pipe.id);
+      const onEndpointPath=pipeTraceResult.toEndpointPipeIds.has(pipe.id);
+      if(onSourcePath&&onEndpointPath) traceGlow='both';
+      else if(onSourcePath) traceGlow='source';
+      else if(onEndpointPath) traceGlow='endpoint';
+      else alpha=alpha*0.12; // heavily dim anything off the traced paths
+    }
+
     if(isSel){const g=mkPoly(pts,st.color,lw+6,null);g.setAttribute('stroke-opacity','0.2');svg.appendChild(g);}
+
+    // Trace glow underlay — distinct bright color per direction, drawn
+    // beneath the normal pipe color so the diameter color still shows on top.
+    if(traceGlow){
+      const glowColor=traceGlow==='source'?'#fbbf24':traceGlow==='endpoint'?'#60a5fa':'#a855f7';
+      const glow=mkPoly(pts,glowColor,lw+8,null);
+      glow.setAttribute('stroke-opacity','0.55');
+      svg.appendChild(glow);
+    }
+
     const pl=mkPoly(pts,st.color,lw,st.dash);
     pl.setAttribute('stroke-opacity',String(alpha));
     pl.style.pointerEvents='stroke';pl.style.cursor=mode==='select'?'pointer':'default';
@@ -1638,7 +1667,12 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&reconnectingPipeId) cancelReconnect();
 });
 
-function selectPipe(id){selectedPipeId=id;selectedNodeId=null;cancelReconnect();switchTab('pipes');renderPipeList();pipeLayer.redraw();}
+function selectPipe(id){
+  selectedPipeId=id;selectedNodeId=null;cancelReconnect();
+  pipeTraceOn=false;pipeTraceResult=null;
+  document.getElementById('btn-trace-pipe')?.classList.remove('active');
+  switchTab('pipes');renderPipeList();pipeLayer.redraw();
+}
 function selectNode(id){selectedNodeId=id;selectedPipeId=null;switchTab('nodes');renderNodeList();pipeLayer.redraw();}
 
 // ── Edit handlers ──────────────────────────────────────
@@ -1828,6 +1862,7 @@ window.runCsvDiff=runCsvDiff;
 function deleteSelectedPipe(){
   const idx=pipes.findIndex(p=>p.id===selectedPipeId);if(idx===-1)return;
   pushHistory();pipes.splice(idx,1);selectedPipeId=null;
+  pipeTraceOn=false;pipeTraceResult=null;
   pushToFirebase();pipeLayer.redraw();renderPipeList();renderNodeMarkers();updateSummary();
 }
 window.deleteSelectedPipe=deleteSelectedPipe;
@@ -3229,6 +3264,114 @@ function effectiveSectionId(node){
   }
   return null;
 }
+
+// ── Connectivity trace: from a selected pipe, find the path back to the
+// nearest source (well/tank/pump) and forward to the nearest terminal
+// endpoint, walking across ALL pipes regardless of layer — this checks
+// real topology, not just the new-layout hydraulic subnetwork.
+function buildFullAdjacency(){
+  const adj={};
+  pipes.forEach(pipe=>{
+    [pipe.startNodeId,pipe.endNodeId].forEach(nid=>{if(!adj[nid])adj[nid]=[];});
+    adj[pipe.startNodeId].push({pipe,neighbourId:pipe.endNodeId});
+    adj[pipe.endNodeId].push({pipe,neighbourId:pipe.startNodeId});
+  });
+  return adj;
+}
+
+// BFS from startNodeId outward, stopping at the first node matching
+// isTarget. Returns {pipeIds:[...], targetNode} or {pipeIds:[...], targetNode:null}
+// if nothing matching was found anywhere reachable (a real dead end).
+function bfsToTarget(adj,startNodeId,isTarget,excludePipeId){
+  if(isTarget(nodes.find(n=>n.id===startNodeId))){
+    return {pipeIds:[],targetNode:nodes.find(n=>n.id===startNodeId)};
+  }
+  const visited=new Set([startNodeId]);
+  const queue=[{nodeId:startNodeId,path:[]}];
+  while(queue.length){
+    const {nodeId,path}=queue.shift();
+    for(const {pipe,neighbourId} of (adj[nodeId]||[])){
+      if(pipe.id===excludePipeId&&path.length===0)continue; // don't immediately backtrack over the pipe we started from
+      if(visited.has(neighbourId))continue;
+      visited.add(neighbourId);
+      const newPath=[...path,pipe.id];
+      const nbNode=nodes.find(n=>n.id===neighbourId);
+      if(isTarget(nbNode)) return {pipeIds:newPath,targetNode:nbNode};
+      queue.push({nodeId:neighbourId,path:newPath});
+    }
+  }
+  return {pipeIds:[],targetNode:null};
+}
+
+function isSourceNode(node){return node&&['well','tank','pump'].includes(node.type);}
+function isTerminalEndpoint(node){
+  if(!node)return false;
+  if(node.type==='endpoint')return true;
+  // A junction with only one connected pipe is also a practical dead end —
+  // worth flagging the same way as a true endpoint.
+  if(node.type==='junction'){
+    const connCount=pipes.filter(p=>p.startNodeId===node.id||p.endNodeId===node.id).length;
+    return connCount<=1;
+  }
+  return false;
+}
+
+function tracePipeConnectivity(pipe){
+  const adj=buildFullAdjacency();
+  const toSource=bfsToTarget(adj,pipe.startNodeId,isSourceNode,pipe.id);
+  // If start node itself didn't find a source, also try from the end node —
+  // covers pipes drawn in either direction relative to the source.
+  let sourceResult=toSource;
+  if(!sourceResult.targetNode){
+    const altSource=bfsToTarget(adj,pipe.endNodeId,isSourceNode,pipe.id);
+    if(altSource.targetNode) sourceResult=altSource;
+  }
+
+  const toEndpoint=bfsToTarget(adj,pipe.endNodeId,isTerminalEndpoint,pipe.id);
+  let endpointResult=toEndpoint;
+  if(!endpointResult.targetNode){
+    const altEnd=bfsToTarget(adj,pipe.startNodeId,isTerminalEndpoint,pipe.id);
+    if(altEnd.targetNode) endpointResult=altEnd;
+  }
+
+  return {
+    toSourcePipeIds:new Set([pipe.id,...sourceResult.pipeIds]),
+    toEndpointPipeIds:new Set([pipe.id,...endpointResult.pipeIds]),
+    sourceNode:sourceResult.targetNode,
+    endpointNode:endpointResult.targetNode
+  };
+}
+
+function togglePipeTrace(){
+  if(!selectedPipeId){alert('Select a pipe first.');return;}
+  pipeTraceOn=!pipeTraceOn;
+  document.getElementById('btn-trace-pipe')?.classList.toggle('active',pipeTraceOn);
+  if(pipeTraceOn){
+    const pipe=pipes.find(p=>p.id===selectedPipeId);
+    pipeTraceResult=pipe?tracePipeConnectivity(pipe):null;
+  } else {
+    pipeTraceResult=null;
+  }
+  renderTraceSummary();
+  pipeLayer.redraw();
+}
+window.togglePipeTrace=togglePipeTrace;
+
+function renderTraceSummary(){
+  const el=document.getElementById('pipe-trace-summary');
+  if(!el)return;
+  if(!pipeTraceOn||!pipeTraceResult){el.innerHTML='';el.style.display='none';return;}
+  el.style.display='block';
+  const {sourceNode,endpointNode,toSourcePipeIds,toEndpointPipeIds}=pipeTraceResult;
+  const srcLine=sourceNode
+    ?`<span style="color:#4ade80">&#10003; Source: ${sourceNode.label} (${sourceNode.type}) — ${toSourcePipeIds.size} pipe(s) on path</span>`
+    :`<span style="color:var(--danger)">&#10005; No source found — dead end, this branch never reaches a well/tank/pump</span>`;
+  const endLine=endpointNode
+    ?`<span style="color:#4ade80">&#10003; Endpoint: ${endpointNode.label} (${endpointNode.type}) — ${toEndpointPipeIds.size} pipe(s) on path</span>`
+    :`<span style="color:var(--danger)">&#10005; No endpoint found — dead end, this branch never reaches a terminal point</span>`;
+  el.innerHTML=`<div style="font-size:10px;line-height:1.7">${srcLine}<br>${endLine}</div>`;
+}
+
 
 function addSection(){
   const input=document.getElementById('new-section-name');
