@@ -240,6 +240,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
   <button onclick="switchProject()" style="height:24px;font-size:11px">Load</button>
   <div class="hdiv"></div>
   <button onclick="migrateSegments()" class="warn-act" title="Convert old pipe segments to node-edge model">&#8645; Migrate old data</button>
+  <button onclick="mergeNearbyNodes()" class="warn-act" title="Optional cleanup: merge junction nodes that are very close together">&#8645; Merge nearby nodes</button>
   <span style="font-size:11px;color:var(--text3);margin-left:4px">Share project name for live sync.</span>
 </div>
 
@@ -1164,7 +1165,6 @@ window.onNepTypeChange=onNepTypeChange;
 
 // ── Migration of old data model ────────────────────────
 function migrateSegments(){
-  // Check for old-format segments key in Firebase
   const oldRef=ref(db,'projects/'+projectId+'/segments');
   import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js').then(({get})=>{
     get(oldRef).then(snap=>{
@@ -1172,17 +1172,41 @@ function migrateSegments(){
       if(!old){alert('No old segments found to migrate.');return;}
       const segs=Array.isArray(old)?old:Object.values(old);
       if(!segs.length){alert('No old segments found.');return;}
-      if(!confirm(`Migrate ${segs.length} old segments to node-edge model? Existing nodes/pipes will be kept.`))return;
+
+      let migrated=0, skippedMalformed=0;
+      const malformedExamples=[];
+
+      if(!confirm(`Found ${segs.length} old segment(s). Migrate to node-edge model?\n\nEvery pipe keeps its own start/end node — nothing is merged or fused. This preserves the exact same map (existing + new layout). You can manually merge nodes into shared junctions afterward if you want a cleaner topology — that's optional.`))return;
+
       pushHistory();
-      segs.forEach(seg=>{
-        if(!seg.latlngs||seg.latlngs.length<2)return;
-        const firstPt=seg.latlngs[0],lastPt=seg.latlngs[seg.latlngs.length-1];
-        const waypoints=seg.latlngs.slice(1,-1);
-        const {node:sn}=getOrCreateNode(firstPt[0],firstPt[1],null);
-        const {node:en}=getOrCreateNode(lastPt[0],lastPt[1],sn.id);
+
+      // No snapping during migration — every pipe endpoint becomes its own
+      // unique node. This guarantees every old pipe survives the migration
+      // exactly as drawn. Merging nodes is a separate, optional manual step.
+      function freshNode(lat,lng){
+        const node={
+          id:'n'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+Math.floor(Math.random()*1e6),
+          type:'junction',lat,lng,elev:null,
+          label:'J'+nodeCounter++,pumpHead:0,waterLevel:null
+        };
+        nodes.push(node);
+        return node;
+      }
+
+      segs.forEach((seg,idx)=>{
+        const pts=seg.latlngs;
+        if(!Array.isArray(pts)||pts.length<2){
+          skippedMalformed++;
+          if(malformedExamples.length<5) malformedExamples.push(`#${idx}: ${JSON.stringify(seg).slice(0,80)}`);
+          return;
+        }
+        const firstPt=pts[0],lastPt=pts[pts.length-1];
+        const waypoints=pts.slice(1,-1);
+        const sn=freshNode(firstPt[0],firstPt[1]);
+        const en=freshNode(lastPt[0],lastPt[1]);
         const isNew=seg.layer==='new';
         const pipe={
-          id:'p'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+          id:'p'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+idx,
           label:seg.label||('Pipe '+pipeCounter++),
           startNodeId:sn.id,endNodeId:en.id,
           waypoints,
@@ -1192,13 +1216,59 @@ function migrateSegments(){
           status:isNew?(seg.status||'required'):'good'
         };
         pipes.push(pipe);
+        migrated++;
       });
+
       pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();
-      alert(`Migrated ${segs.length} segments. Wells and tanks will appear as junctions — click them in Select mode to upgrade their type.`);
+
+      let msg=`Migrated ${migrated} of ${segs.length} segment(s) — every pipe kept its own nodes, nothing merged.`;
+      if(skippedMalformed>0){
+        msg+=`\n\n${skippedMalformed} segment(s) were skipped because they didn't have a valid latlngs array.`;
+        if(malformedExamples.length) msg+=`\n\nExamples:\n${malformedExamples.join('\n')}`;
+      }
+      msg+=`\n\nWells and tanks will appear as junctions (grey J) — click them in Select mode to upgrade their type.`;
+      alert(msg);
+    }).catch(err=>{
+      alert('Migration failed to read old data: '+err.message);
     });
   });
 }
 window.migrateSegments=migrateSegments;
+
+function mergeNearbyNodes(){
+  const dist=parseFloat(prompt('Merge junction nodes within this distance (metres) of each other?\n\nOnly plain junctions (J) are merged — wells, tanks, pumps, and endpoints are never touched, so you never lose a source or destination by accident.','2'));
+  if(!dist||dist<=0)return;
+
+  pushHistory();
+  let mergedCount=0;
+  const junctions=nodes.filter(n=>n.type==='junction');
+  const toRemove=new Set();
+
+  for(let i=0;i<junctions.length;i++){
+    const a=junctions[i];
+    if(toRemove.has(a.id))continue;
+    for(let j=i+1;j<junctions.length;j++){
+      const b=junctions[j];
+      if(toRemove.has(b.id))continue;
+      const d=haversineM([a.lat,a.lng],[b.lat,b.lng]);
+      if(d<=dist){
+        // Repoint every pipe referencing b to point at a instead
+        pipes.forEach(p=>{
+          if(p.startNodeId===b.id)p.startNodeId=a.id;
+          if(p.endNodeId===b.id)p.endNodeId=a.id;
+        });
+        toRemove.add(b.id);
+        mergedCount++;
+      }
+    }
+  }
+  nodes=nodes.filter(n=>!toRemove.has(n.id));
+  pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();
+  alert(mergedCount>0
+    ?`Merged ${mergedCount} nearby junction(s). No pipes were deleted — they were repointed to the surviving node.`
+    :'No junctions found within that distance. Nothing changed.');
+}
+window.mergeNearbyNodes=mergeNearbyNodes;
 
 // ── History ────────────────────────────────────────────
 function pushHistory(){history.push(JSON.parse(JSON.stringify({nodes,pipes,elevPts,zones})));if(history.length>40)history.shift();}
