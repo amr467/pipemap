@@ -318,6 +318,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
   </div>
   <div class="tg">
     <button onclick="undo()">&#8617; Undo</button>
+    <button onclick="redo()">&#8618; Redo</button>
     <button class="danger" onclick="clearAll()">Clear</button>
   </div>
 </div>
@@ -484,6 +485,7 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
         </div>
         <button id="btn-trace-pipe" onclick="togglePipeTrace()" style="width:100%;height:24px;font-size:11px;border-color:#a855f7;color:#a855f7">&#9737; Trace to source &amp; endpoint</button>
         <div id="pipe-trace-summary" style="display:none;margin-top:5px;padding:5px 7px;background:var(--surface);border-radius:var(--radius)"></div>
+        <button onclick="explainPipeLength()" style="width:100%;height:24px;font-size:11px;margin-top:5px;border-color:#fbbf24;color:#fbbf24">&#128269; Explain this pipe's length</button>
         <div class="ep-actions" style="margin-top:8px">
           <button class="ep-apply" onclick="applyPipeEdit()">&#10003; Apply</button>
           <button class="danger"   onclick="deleteSelectedPipe()">&#215; Delete</button>
@@ -706,7 +708,7 @@ let sectionCounter=1;
 let selectedPipeId=null, selectedNodeId=null, selectedZoneId=null;
 let mode='select';
 let layerVisible={existing:true,new:true,nodes:true,elev:true,zones:true};
-let history=[];
+let history=[],redoStack=[];
 let pipeCounter=1, nodeCounter=1, elevCounter=1;
 let drawPts=[],drawStartNodeId=null;
 let drawMarkers=[];
@@ -1074,8 +1076,11 @@ function renderNodeMarkers(){
       return;
     }
 
-    const mk=L.marker([node.lat,node.lng],{icon:mkNodeIcon(node,unconnected),zIndexOffset:1000})
-      .bindTooltip(node.label||node.type,{permanent:false,direction:'top',offset:[0,-12]})
+    const mk=L.marker([node.lat,node.lng],{
+      icon:mkNodeIcon(node,unconnected),
+      zIndexOffset:1000,
+      draggable:(mode==='select') // only draggable while in Select mode, to avoid accidental drags while drawing
+    }).bindTooltip(node.label||node.type,{permanent:false,direction:'top',offset:[0,-12]})
       .addTo(map);
     mk.on('click',e=>{
       L.DomEvent.stopPropagation(e);
@@ -1086,6 +1091,15 @@ function renderNodeMarkers(){
       } else if(mode==='select'){
         selectNode(node.id);
       }
+    });
+    mk.on('dragstart',()=>{pushHistory();});
+    mk.on('drag',e=>{
+      const ll=e.target.getLatLng();
+      node.lat=ll.lat;node.lng=ll.lng;
+      pipeLayer.redraw(); // live-update attached pipes while dragging
+    });
+    mk.on('dragend',()=>{
+      pushToFirebase();renderNodeList();updateSummary();
     });
     nodeLeafletMarkers[node.id]=mk;
   });
@@ -1195,6 +1209,69 @@ function pipeLenM(pipe){
   let t=0;for(let i=0;i<pts.length-1;i++)t+=haversineM(pts[i],pts[i+1]);
   return t;
 }
+
+// Shows a full breakdown of every factor contributing to the selected
+// pipe's measured length: raw node-to-node distance, whether either end
+// is using a tank-boundary attach point (and how much that shifts it from
+// the tank's plain centroid), how many waypoints add to the path, and the
+// final total — so any "this length changed a lot" question can be
+// answered directly instead of guessed at.
+function explainPipeLength(){
+  const pipe=pipes.find(p=>p.id===selectedPipeId);
+  if(!pipe){alert('Select a pipe first.');return;}
+  const sn=nodes.find(n=>n.id===pipe.startNodeId),en=nodes.find(n=>n.id===pipe.endNodeId);
+  if(!sn||!en){alert(`${pipe.label} has a missing start or end node — length cannot be computed.`);return;}
+
+  const lines=[];
+  lines.push(`${pipe.label} — current measured length: ${pipeLenM(pipe).toFixed(2)}m`);
+  lines.push('');
+
+  // Start end
+  const startUsesTankAttach=!!pipe.startAttachPt;
+  lines.push(`START — ${sn.label} (${sn.type})`);
+  if(startUsesTankAttach){
+    const centroidDist=haversineM(pipe.startAttachPt,[sn.lat,sn.lng]);
+    lines.push(`  Using tank boundary attach point, ${centroidDist.toFixed(2)}m from ${sn.label}'s centroid.`);
+    lines.push(`  (If this used the centroid instead, length would change by ~${centroidDist.toFixed(1)}m — this is expected for tanks, not a bug.)`);
+  } else {
+    lines.push(`  Using ${sn.label}'s plain position (no tank boundary involved).`);
+  }
+  lines.push('');
+
+  // End
+  const endUsesTankAttach=!!pipe.endAttachPt;
+  lines.push(`END — ${en.label} (${en.type})`);
+  if(endUsesTankAttach){
+    const centroidDist=haversineM(pipe.endAttachPt,[en.lat,en.lng]);
+    lines.push(`  Using tank boundary attach point, ${centroidDist.toFixed(2)}m from ${en.label}'s centroid.`);
+    lines.push(`  (If this used the centroid instead, length would change by ~${centroidDist.toFixed(1)}m — this is expected for tanks, not a bug.)`);
+  } else {
+    lines.push(`  Using ${en.label}'s plain position (no tank boundary involved).`);
+  }
+  lines.push('');
+
+  // Waypoints
+  const wpCount=(pipe.waypoints||[]).length;
+  lines.push(`SHAPE — ${wpCount} intermediate waypoint(s)`);
+  if(wpCount>0){
+    const directDist=haversineM(pipe.startAttachPt||[sn.lat,sn.lng],pipe.endAttachPt||[en.lat,en.lng]);
+    lines.push(`  Straight-line distance start→end (ignoring waypoints): ${directDist.toFixed(2)}m`);
+    lines.push(`  Actual path length (following waypoints): ${pipeLenM(pipe).toFixed(2)}m`);
+    const extra=pipeLenM(pipe)-directDist;
+    lines.push(`  Waypoints add ${extra.toFixed(2)}m of extra path beyond a straight line.`);
+  } else {
+    lines.push(`  No waypoints — this is a straight line between start and end.`);
+  }
+  lines.push('');
+
+  // ID note for split pipes, since the label alone doesn't show this
+  if(pipe.id.includes('_split')){
+    lines.push(`NOTE: This pipe was created by splitting a longer pipe at a mid-span connection point. Its length is one piece of the original — check the other piece (look for a pipe ending where this one starts or ends) if you're comparing against a length you remember for the original run.`);
+  }
+
+  alert(lines.join('\n'));
+}
+window.explainPipeLength=explainPipeLength;
 
 // Diagnostic: shows every pipe connected to a tank, comparing its current
 // length (using the boundary attach point, if set) against what it would
@@ -1314,6 +1391,17 @@ function nearestNode(lat,lng,excludeId){
 function getOrCreateNode(lat,lng,excludeId){
   const snap=nearestNode(lat,lng,excludeId);
   if(snap)return{node:snap,created:false};
+
+  // No node nearby — check if this point sits on (or very near) an existing
+  // pipe's line. If so, split that pipe and insert a junction right there
+  // instead of creating an isolated dangling node. Length-preserving: the
+  // split point lies on the original line, so the two pieces sum back to
+  // the original length (to floating-point rounding).
+  const midSpan=findNearestMidSpanPoint(lat,lng,excludeId);
+  if(midSpan){
+    return {node:splitPipeAtPoint(midSpan.pipe,midSpan.closest),created:true,wasSplit:true};
+  }
+
   const node={
     id:'n'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
     type:'junction',lat,lng,elev:null,
@@ -1321,6 +1409,74 @@ function getOrCreateNode(lat,lng,excludeId){
   };
   nodes.push(node);
   return{node,created:true};
+}
+
+// Scans all pipes for the closest mid-span point to (lat,lng) within snap
+// distance, excluding endpoint-proximity cases (those are already handled
+// by nearestNode/nearestNodeWithSnap) and excluding the pipe currently
+// being drawn from/to (excludePipeId), so a pipe never "snaps" onto itself.
+function findNearestMidSpanPoint(lat,lng,excludeNodeId){
+  const thresh=snapThresh();
+  let best=null,bestD=Infinity;
+  pipes.forEach(pipe=>{
+    // Don't let a pipe snap onto itself if we're mid-edit and one of its
+    // own endpoints is the excluded node.
+    if(excludeNodeId&&(pipe.startNodeId===excludeNodeId||pipe.endNodeId===excludeNodeId))return;
+    const cp=closestPointOnPipe(pipe,lat,lng);
+    if(!cp)return;
+    if(cp.dist>thresh)return;
+    // Skip if the closest point is basically right on one of the pipe's
+    // own endpoints — that case means you're snapping to a node, which
+    // nearestNode already handles; we only want genuine mid-span hits here.
+    const distToStart=haversineM([lat,lng],cp.allPts[0]);
+    const distToEnd=haversineM([lat,lng],cp.allPts[cp.allPts.length-1]);
+    if(distToStart<=thresh||distToEnd<=thresh)return;
+    if(cp.dist<bestD){bestD=cp.dist;best={pipe,closest:cp};}
+  });
+  return best;
+}
+
+// Splits a pipe at the given closest-point result, inserting a new shared
+// junction there. Returns the new junction node. The two resulting pieces
+// sum to the original pipe's length since the split point lies exactly on
+// the original line.
+function splitPipeAtPoint(throughPipe,closest){
+  const {point:splitPoint,segIndex,allPts}=closest;
+  const junction={
+    id:'n'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    type:'junction',lat:splitPoint[0],lng:splitPoint[1],elev:null,
+    label:'J'+nodeCounter++,pumpHead:0,waterLevel:null
+  };
+  nodes.push(junction);
+
+  const firstHalfPts=[...allPts.slice(0,segIndex+1),splitPoint];
+  const secondHalfPts=[splitPoint,...allPts.slice(segIndex+1)];
+
+  const origEndNodeId=throughPipe.endNodeId;
+  const origEndAttach=throughPipe.endAttachPt;
+
+  throughPipe.endNodeId=junction.id;
+  throughPipe.endAttachPt=null;
+  throughPipe.waypoints=firstHalfPts.slice(1,-1);
+
+  const pieceB={
+    id:'p'+Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_split',
+    label:'Pipe '+pipeCounter++,
+    startNodeId:junction.id,
+    endNodeId:origEndNodeId,
+    startAttachPt:null,
+    endAttachPt:origEndAttach,
+    waypoints:secondHalfPts.slice(1,-1),
+    dia:throughPipe.dia,
+    layer:throughPipe.layer,
+    condition:throughPipe.condition,
+    status:throughPipe.status,
+    direction:throughPipe.direction,
+    valveState:throughPipe.valveState
+  };
+  pipes.push(pieceB);
+
+  return junction;
 }
 
 // ── Classify new pipe by proximity to existing ─────────
@@ -1355,6 +1511,7 @@ function setMode(m){
   document.getElementById('tg-node-type').style.display=m==='node'?'':'none';
   map.dragging[m==='pipe'||m==='zone'?'disable':'enable']();
   document.getElementById('map').style.cursor=(m==='pipe'||m==='node'||m==='elev'||m==='zone')?'crosshair':'';
+  renderNodeMarkers(); // re-render so draggable flag matches the new mode
   pipeLayer.redraw();
 }
 window.setMode=setMode;
@@ -2766,10 +2923,27 @@ function mergeNearbyNodes(){
 window.mergeNearbyNodes=mergeNearbyNodes;
 
 // ── History ────────────────────────────────────────────
-function pushHistory(){history.push(JSON.parse(JSON.stringify({nodes,pipes,elevPts,zones,sections,schedules})));if(history.length>40)history.shift();}
+function pushHistory(){
+  history.push(JSON.parse(JSON.stringify({nodes,pipes,elevPts,zones,sections,schedules})));
+  if(history.length>40)history.shift();
+  redoStack=[]; // any new action invalidates the redo trail
+}
 function undo(){
   if(!history.length)return;
+  // Save current state onto the redo stack before stepping back
+  redoStack.push(JSON.parse(JSON.stringify({nodes,pipes,elevPts,zones,sections,schedules})));
   const s=history.pop();nodes=s.nodes;pipes=s.pipes;elevPts=s.elevPts;zones=s.zones||[];
+  sections=s.sections||[];schedules=s.schedules||{};
+  selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;drawPts=[];drawStartNodeId=null;
+  zonePts=[];zoneMarkers.forEach(m=>m.remove());zoneMarkers=[];
+  drawMarkers.forEach(m=>m.remove());drawMarkers=[];
+  pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();renderElevMarkers();renderZoneLayers();
+}
+function redo(){
+  if(!redoStack.length)return;
+  // Save current state back onto the undo history before stepping forward
+  history.push(JSON.parse(JSON.stringify({nodes,pipes,elevPts,zones,sections,schedules})));
+  const s=redoStack.pop();nodes=s.nodes;pipes=s.pipes;elevPts=s.elevPts;zones=s.zones||[];
   sections=s.sections||[];schedules=s.schedules||{};
   selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;drawPts=[];drawStartNodeId=null;
   zonePts=[];zoneMarkers.forEach(m=>m.remove());zoneMarkers=[];
@@ -2782,7 +2956,7 @@ function clearAll(){
   pushHistory();nodes=[];pipes=[];elevPts=[];zones=[];sections=[];schedules={};selectedPipeId=null;selectedNodeId=null;selectedZoneId=null;
   pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();renderElevMarkers();renderZoneLayers();
 }
-window.undo=undo;window.clearAll=clearAll;
+window.undo=undo;window.redo=redo;window.clearAll=clearAll;
 
 // ── Firebase ───────────────────────────────────────────
 function setSyncStatus(s){
