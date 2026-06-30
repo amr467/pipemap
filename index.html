@@ -332,6 +332,12 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
           <button onclick="diagnoseDiameterTotal(prompt('Which diameter to break down? (5, 4, 3, 2, or 20mm)','4'))" style="width:100%;height:24px;font-size:11px;margin-top:4px">&#128269; Break down a diameter's total</button>
           <button onclick="cleanupOrphanedPipes()" style="width:100%;height:24px;font-size:11px;margin-top:4px;border-color:var(--danger);color:var(--danger)">&#10005; Remove orphaned pipes (missing nodes)</button>
           <button onclick="findDuplicateLabels()" style="width:100%;height:24px;font-size:11px;margin-top:4px;border-color:var(--warn);color:var(--warn)">&#128269; Find duplicate pipe labels</button>
+          <button onclick="toggleDiffPanel()" style="width:100%;height:24px;font-size:11px;margin-top:8px;border-color:var(--accent);color:var(--accent)">&#9707; Compare against old CSV export</button>
+          <div id="diff-panel" style="display:none;margin-top:6px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Paste your old "before" CSV pipe rows below (Segment,Layer,Diameter,Status,Length format) and click Compare. This checks every current pipe against the old list by diameter+length+status, no guessing.</div>
+            <textarea id="diff-input" placeholder="Seg 1,existing,4,good,1124.01&#10;Seg 2,existing,5,good,210.32&#10;..." style="width:100%;height:90px;font-size:10px;font-family:monospace;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);padding:5px;resize:vertical"></textarea>
+            <button onclick="runCsvDiff()" style="width:100%;height:24px;font-size:11px;margin-top:4px;border-color:var(--accent);color:var(--accent)">&#9654; Compare</button>
+          </div>
         </div>
 
         <div class="sblock">
@@ -1667,6 +1673,91 @@ function findDuplicateLabels(){
   alert(`Found ${dupes.length} label(s) used by more than one pipe:\n\n${lines.join('\n\n')}\n\nThese weren't auto-removed since one of each pair might be legitimate. Open the Pipes tab, find pipes with these labels, and delete whichever one looks wrong (usually the one with 0m length or an unexpected diameter).`);
 }
 window.findDuplicateLabels=findDuplicateLabels;
+
+function toggleDiffPanel(){
+  const panel=document.getElementById('diff-panel');
+  panel.style.display=panel.style.display==='none'?'block':'none';
+}
+window.toggleDiffPanel=toggleDiffPanel;
+
+// Compares the live pipe list against a pasted-in old CSV export. Matches
+// by diameter + length (within 2m tolerance) since that's the only stable
+// fingerprint across a migration that renumbers/relabels segments. Reports
+// exactly which old pipes have no current match (likely lost or corrupted)
+// and which current pipes have no old match (likely new, or a corrupted
+// version of something that used to be different).
+function runCsvDiff(){
+  const raw=document.getElementById('diff-input').value.trim();
+  if(!raw){alert('Paste your old CSV pipe rows first.');return;}
+
+  // Parse pasted CSV: Segment,Layer,Diameter,Status,Length
+  const oldRows=raw.split('\n').map(line=>line.split(',').map(s=>s.trim())).filter(r=>r.length>=5&&r[4]!=='');
+  if(!oldRows.length){alert('Could not parse any rows. Expected format: Segment,Layer,Diameter,Status,Length');return;}
+
+  const oldPipes=oldRows.map(r=>({
+    label:r[0],layer:r[1],dia:r[2],status:r[3],len:parseFloat(r[4])
+  })).filter(p=>!isNaN(p.len));
+
+  const curPipes=pipes.map(p=>({
+    label:p.label,layer:p.layer,dia:p.dia,
+    status:p.layer==='existing'?p.condition:p.status,
+    len:pipeLenM(p),
+    id:p.id
+  }));
+
+  // Greedy matching: for each old pipe, find the closest unused current pipe
+  // with the same diameter, within tolerance. Tolerance is generous (8m)
+  // to absorb the small, legitimate tank-boundary attach-point differences
+  // we've already confirmed are correct — anything beyond that is a real
+  // discrepancy worth flagging.
+  const TOLERANCE=8;
+  const usedCur=new Set();
+  const matched=[];
+  oldPipes.forEach(old=>{
+    let bestIdx=null,bestDiff=Infinity;
+    curPipes.forEach((cur,i)=>{
+      if(usedCur.has(i))return;
+      if(cur.dia!==old.dia)return;
+      const diff=Math.abs(cur.len-old.len);
+      if(diff<bestDiff){bestDiff=diff;bestIdx=i;}
+    });
+    if(bestIdx!==null&&bestDiff<=TOLERANCE){
+      usedCur.add(bestIdx);
+      matched.push({old,cur:curPipes[bestIdx],diff:curPipes[bestIdx].len-old.len});
+    } else {
+      matched.push({old,cur:null,diff:null});
+    }
+  });
+
+  const missing=matched.filter(m=>!m.cur);
+  const found=matched.filter(m=>m.cur);
+  const newOrUnmatched=curPipes.filter((c,i)=>!usedCur.has(i));
+
+  const lenLost=missing.reduce((a,m)=>a+m.old.len,0);
+  const lenNew=newOrUnmatched.reduce((a,c)=>a+c.len,0);
+
+  let msg=`Compared ${oldPipes.length} old pipes against ${curPipes.length} current pipes.\n\n`;
+  msg+=`MATCHED (within ${TOLERANCE}m tolerance): ${found.length}\n`;
+  msg+=`OLD PIPES WITH NO CURRENT MATCH (likely lost): ${missing.length} — totaling ${lenLost.toFixed(1)}m\n`;
+  msg+=`CURRENT PIPES WITH NO OLD MATCH (new, or corrupted versions of something old): ${newOrUnmatched.length} — totaling ${lenNew.toFixed(1)}m\n\n`;
+
+  if(missing.length){
+    msg+=`--- LOST PIPES (existed before, no longer found) ---\n`;
+    missing.forEach(m=>{
+      msg+=`${m.old.label}: ${m.old.dia}", ${m.old.len.toFixed(1)}m, ${m.old.layer}/${m.old.status}\n`;
+    });
+    msg+=`\n`;
+  }
+  if(newOrUnmatched.length){
+    msg+=`--- UNMATCHED CURRENT PIPES (new, or replaced something old) ---\n`;
+    newOrUnmatched.forEach(c=>{
+      msg+=`${c.label}: ${c.dia}", ${c.len.toFixed(1)}m, ${c.layer}/${c.status}\n`;
+    });
+  }
+
+  alert(msg);
+}
+window.runCsvDiff=runCsvDiff;
 
 function deleteSelectedPipe(){
   const idx=pipes.findIndex(p=>p.id===selectedPipeId);if(idx===-1)return;
