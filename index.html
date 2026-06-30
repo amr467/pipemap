@@ -329,6 +329,9 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
           <div id="net-stats"></div>
           <button onclick="diagnoseTankLengths()" style="width:100%;height:24px;font-size:11px;margin-top:6px">&#128269; Check tank-connected pipe lengths</button>
           <button onclick="diagnoseTankShape(prompt('Tank label to inspect (e.g. T109)?'))" style="width:100%;height:24px;font-size:11px;margin-top:4px">&#128269; Inspect a tank's shape</button>
+          <button onclick="diagnoseDiameterTotal(prompt('Which diameter to break down? (5, 4, 3, 2, or 20mm)','4'))" style="width:100%;height:24px;font-size:11px;margin-top:4px">&#128269; Break down a diameter's total</button>
+          <button onclick="cleanupOrphanedPipes()" style="width:100%;height:24px;font-size:11px;margin-top:4px;border-color:var(--danger);color:var(--danger)">&#10005; Remove orphaned pipes (missing nodes)</button>
+          <button onclick="findDuplicateLabels()" style="width:100%;height:24px;font-size:11px;margin-top:4px;border-color:var(--warn);color:var(--warn)">&#128269; Find duplicate pipe labels</button>
         </div>
 
         <div class="sblock">
@@ -1094,6 +1097,26 @@ function pipeLenM(pipe){
 // measure using the tank's raw centroid instead. Helps explain any jump in
 // procurement totals caused by attach points snapping to a default tank
 // footprint rather than the tank's real size.
+// Breaks down the total length for one diameter size, listing every pipe
+// that contributes to it — so a surprising jump in a size's total can be
+// traced to the specific pipe(s) responsible, rather than guessed at.
+function diagnoseDiameterTotal(dia){
+  const matching=pipes.filter(p=>p.dia===dia);
+  if(!matching.length){alert(`No pipes found with diameter ${dia}.`);return;}
+
+  let total=0;
+  const rows=matching.map(pipe=>{
+    const l=pipeLenM(pipe);
+    total+=l;
+    const sn=nodes.find(n=>n.id===pipe.startNodeId),en=nodes.find(n=>n.id===pipe.endNodeId);
+    const tankNote=(sn?.type==='tank'||en?.type==='tank')?' [tank-connected]':'';
+    return `${pipe.label}: ${l.toFixed(1)}m — ${pipe.layer}/${pipe.layer==='existing'?pipe.condition:pipe.status}${tankNote}`;
+  });
+  rows.sort((a,b)=>parseFloat(b.split(': ')[1])-parseFloat(a.split(': ')[1])); // longest first
+  alert(`${dia} pipes — ${matching.length} total, summing to ${total.toFixed(1)}m\n\n`+rows.join('\n'));
+}
+window.diagnoseDiameterTotal=diagnoseDiameterTotal;
+
 function diagnoseTankLengths(){
   const tankPipes=pipes.filter(p=>{
     const sn=nodes.find(n=>n.id===p.startNodeId),en=nodes.find(n=>n.id===p.endNodeId);
@@ -1592,6 +1615,58 @@ function calcZoneEstimate(){
     `Total flow demand: <b>${totalM3h} m³/hr</b> (<b>${totalLhr.toFixed(0)} L/hr</b>)`;
 }
 window.calcZoneEstimate=calcZoneEstimate;
+
+// Finds and removes pipes whose start or end node doesn't exist in the
+// nodes array — these are migration artifacts (a node reference that got
+// lost during the old segments -> node-edge conversion), always zero-length,
+// and never legitimate data. Shows exactly what it's about to remove before
+// doing anything, and nothing else in the network is touched.
+function cleanupOrphanedPipes(){
+  const orphaned=pipes.filter(p=>{
+    const sn=nodes.find(n=>n.id===p.startNodeId);
+    const en=nodes.find(n=>n.id===p.endNodeId);
+    return !sn||!en;
+  });
+  if(!orphaned.length){alert('No orphaned pipes found — every pipe has valid start and end nodes.');return;}
+
+  const list=orphaned.map(p=>`${p.label} (${p.layer}, ${p.dia}", ${p.layer==='existing'?p.condition:p.status})`).join('\n');
+  if(!confirm(`Found ${orphaned.length} pipe(s) with a missing node reference — these are migration artifacts with zero length and no real data:\n\n${list}\n\nRemove them? Nothing else will be touched.`))return;
+
+  pushHistory();
+  pipes=pipes.filter(p=>{
+    const sn=nodes.find(n=>n.id===p.startNodeId);
+    const en=nodes.find(n=>n.id===p.endNodeId);
+    return sn&&en;
+  });
+  pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();updateSummary();
+  alert(`Removed ${orphaned.length} orphaned pipe(s).`);
+}
+window.cleanupOrphanedPipes=cleanupOrphanedPipes;
+
+// Finds pipes sharing the same label — a sign that migration accidentally
+// created the same logical pipe twice. Does NOT delete automatically (label
+// collisions can sometimes be legitimate if you renamed something), instead
+// lists them so you can inspect each pair and decide which to keep.
+function findDuplicateLabels(){
+  const byLabel={};
+  pipes.forEach(p=>{
+    if(!byLabel[p.label])byLabel[p.label]=[];
+    byLabel[p.label].push(p);
+  });
+  const dupes=Object.entries(byLabel).filter(([label,arr])=>arr.length>1);
+  if(!dupes.length){alert('No duplicate pipe labels found.');return;}
+
+  const lines=dupes.map(([label,arr])=>{
+    const details=arr.map(p=>{
+      const sn=nodes.find(n=>n.id===p.startNodeId),en=nodes.find(n=>n.id===p.endNodeId);
+      const len=pipeLenM(p);
+      return `   • ${p.dia}", ${len.toFixed(1)}m, ${sn?sn.label:'?'}→${en?en.label:'?'} [id: ${p.id.slice(0,20)}...]`;
+    }).join('\n');
+    return `${label} (${arr.length} pipes):\n${details}`;
+  });
+  alert(`Found ${dupes.length} label(s) used by more than one pipe:\n\n${lines.join('\n\n')}\n\nThese weren't auto-removed since one of each pair might be legitimate. Open the Pipes tab, find pipes with these labels, and delete whichever one looks wrong (usually the one with 0m length or an unexpected diameter).`);
+}
+window.findDuplicateLabels=findDuplicateLabels;
 
 function deleteSelectedPipe(){
   const idx=pipes.findIndex(p=>p.id===selectedPipeId);if(idx===-1)return;
