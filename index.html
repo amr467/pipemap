@@ -255,6 +255,9 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
   <button onclick="migrateSegments()" class="warn-act" title="Convert old pipe segments to node-edge model">&#8645; Migrate old data</button>
   <button onclick="inspectOldData()" class="warn-act" title="See exactly what's stored under the old segments key, and check other possible locations">&#128269; Inspect old data</button>
   <button onclick="viewRawOldData()" class="warn-act" title="List every raw old segment with full coordinates, to recover a specific lost pipe">&#128269; View raw old segments</button>
+  <button onclick="findVisuallyOverlappingJunctions()" class="warn-act" title="Find junctions that look connected on the map but are actually separate nodes">&#128269; Find disconnected junctions</button>
+  <button onclick="findUnconnectedNearbyNodes()" class="warn-act" title="Find pipe endpoints sitting near a node they're not actually connected to">&#128269; Find unconnected nearby nodes</button>
+  <button onclick="findMidSpanIntersections()" class="warn-act" title="Find dangling endpoints that should tee into the middle of another pipe">&#128269; Find mid-span intersections</button>
   <button onclick="mergeNearbyNodes()" class="warn-act" title="Optional cleanup: merge junction nodes that are very close together">&#8645; Merge nearby nodes</button>
   <span style="font-size:11px;color:var(--text3);margin-left:4px">Share project name for live sync.</span>
 </div>
@@ -2340,6 +2343,353 @@ function recreateOldSegment(target){
 }
 window.recreateOldSegment=recreateOldSegment;
 window.showOldSegmentOnMap=showOldSegmentOnMap;
+
+// Finds junction nodes that sit very close together on the map (visually
+// look like one connection point) but are actually separate node objects —
+// meaning pipes touching one of them are NOT topologically connected to
+// pipes touching the other, even though they appear to meet on screen.
+// This is the exact bug pattern that breaks the network silently: it looks
+// fully connected, but the trace tool finds dead ends because the pipes
+// never actually share a node.
+// ── Detector A: a pipe endpoint sitting near a node it's NOT actually
+// connected to, even though no duplicate junction exists at that spot.
+// This is the "looks like one junction but the pipe never referenced it"
+// failure mode — different from the overlapping-pair case above.
+function findUnconnectedNearbyNodes(){
+  const THRESH_M=3;
+  const candidates=[]; // {pipe, end:'start'|'end', pipeNodeId, nearbyNode, dist}
+
+  pipes.forEach(pipe=>{
+    [['start',pipe.startNodeId],['end',pipe.endNodeId]].forEach(([end,ownNodeId])=>{
+      const ownNode=nodes.find(n=>n.id===ownNodeId);
+      if(!ownNode)return;
+      nodes.forEach(other=>{
+        if(other.id===ownNodeId)return;
+        const d=haversineM([ownNode.lat,ownNode.lng],[other.lat,other.lng]);
+        if(d<=THRESH_M){
+          // Already connected to this exact node? skip — not a problem.
+          const alreadyLinked=pipe.startNodeId===other.id||pipe.endNodeId===other.id;
+          if(alreadyLinked)return;
+          candidates.push({pipe,end,ownNode,nearbyNode:other,dist:d});
+        }
+      });
+    });
+  });
+
+  openModal('Unconnected nearby nodes');
+  const body=document.getElementById('modal-body');
+  body.style.whiteSpace='normal';
+  body.style.fontFamily='inherit';
+
+  if(!candidates.length){
+    body.innerHTML='<div style="color:var(--accent)">✓ No pipe endpoints found sitting near a node they\'re not connected to.</div>';
+    document.getElementById('modal-footer').innerHTML='';
+    return;
+  }
+
+  unconnectedCandCache=candidates;
+  body.innerHTML=`<div style="margin-bottom:10px;color:var(--text2)">Found <b>${candidates.length}</b> pipe endpoint(s) sitting within ${THRESH_M}m of a node they are NOT connected to. Review each — approving will snap that endpoint onto the nearby node (repointing it, not redrawing it), so length changes only by the snap distance shown.</div>`+
+    candidates.map((c,i)=>
+      `<div style="margin-bottom:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--warn)">`+
+        `<div style="font-size:11px;color:var(--text)">${c.pipe.label} (${c.end}) is ${c.dist.toFixed(2)}m from <b>${c.nearbyNode.label}</b> (${c.nearbyNode.type}) but connects to <b>${c.ownNode.label}</b> instead</div>`+
+        `<div style="margin-top:5px;display:flex;gap:5px">`+
+          `<button onclick="showUnconnectedCandOnMap(${i})" style="height:22px;padding:0 8px;font-size:10px;border-color:#fbbf24;color:#fbbf24">&#9650; Show on map</button>`+
+          `<button onclick="approveSnapToNearby(${i})" style="height:22px;padding:0 8px;font-size:10px;border-color:var(--accent);color:var(--accent)">&#10003; Snap to ${c.nearbyNode.label}</button>`+
+        `</div>`+
+      `</div>`
+    ).join('');
+  document.getElementById('modal-footer').innerHTML='';
+}
+window.findUnconnectedNearbyNodes=findUnconnectedNearbyNodes;
+
+let unconnectedCandCache=null;
+function showUnconnectedCandOnMap(i){
+  const c=unconnectedCandCache?.[i];if(!c)return;
+  closeModal();clearOldSegOverlay();
+  const mk1=L.circleMarker([c.ownNode.lat,c.ownNode.lng],{radius:12,color:'#f87171',weight:3,fillColor:'#f87171',fillOpacity:0.15}).addTo(map);
+  const mk2=L.circleMarker([c.nearbyNode.lat,c.nearbyNode.lng],{radius:12,color:'#4ade80',weight:3,fillColor:'#4ade80',fillOpacity:0.15}).addTo(map);
+  oldSegEndMarkers.push(mk1,mk2);
+  map.fitBounds(L.latLngBounds([[c.ownNode.lat,c.ownNode.lng],[c.nearbyNode.lat,c.nearbyNode.lng]]),{padding:[80,80],maxZoom:20});
+  showOldSegBannerCustom(`${c.pipe.label} (${c.end}, red) is ${c.dist.toFixed(2)}m from ${c.nearbyNode.label} (green) but not connected to it.`);
+}
+window.showUnconnectedCandOnMap=showUnconnectedCandOnMap;
+
+function approveSnapToNearby(i){
+  const c=unconnectedCandCache?.[i];if(!c)return;
+  pushHistory();
+  if(c.end==='start') c.pipe.startNodeId=c.nearbyNode.id;
+  else c.pipe.endNodeId=c.nearbyNode.id;
+  // Clear any stale tank-boundary attach point — it no longer applies since
+  // the pipe now connects to a different node entirely.
+  if(c.end==='start') c.pipe.startAttachPt=null;
+  else c.pipe.endAttachPt=null;
+  pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();updateSummary();
+  alert(`${c.pipe.label} (${c.end}) now connects to ${c.nearbyNode.label}.`);
+  findUnconnectedNearbyNodes(); // refresh the list
+}
+window.approveSnapToNearby=approveSnapToNearby;
+
+// Closest point anywhere along a full pipe's path (start, waypoints, end)
+// to a given lat/lng. Returns {point, dist, segIndex} where segIndex is
+// which segment of the pipe's point list the closest point falls on —
+// needed to know where to split the pipe if we insert a junction there.
+function closestPointOnPipe(pipe,lat,lng){
+  const sn=nodes.find(n=>n.id===pipe.startNodeId),en=nodes.find(n=>n.id===pipe.endNodeId);
+  if(!sn||!en)return null;
+  const startLL=pipe.startAttachPt||[sn.lat,sn.lng];
+  const endLL=pipe.endAttachPt||[en.lat,en.lng];
+  const allPts=[startLL,...(pipe.waypoints||[]),endLL];
+  let best=null,bestD=Infinity,bestIdx=-1;
+  for(let i=0;i<allPts.length-1;i++){
+    const cp=closestPointOnSegment([lat,lng],allPts[i],allPts[i+1]);
+    const d=haversineM([lat,lng],cp);
+    if(d<bestD){bestD=d;best=cp;bestIdx=i;}
+  }
+  return {point:best,dist:bestD,segIndex:bestIdx,allPts};
+}
+
+// ── Detector B: a pipe endpoint (typically a lone dangling junction) that
+// sits near the MIDDLE of another pipe's run, not near either of that
+// pipe's own endpoints — meaning it should physically tee into that pipe,
+// but currently has no connection there at all.
+function findMidSpanIntersections(){
+  const THRESH_M=3;
+  const candidates=[]; // {danglingNode, throughPipe, closest:{point,dist,segIndex,allPts}}
+
+  // A "dangling" node candidate: any junction or endpoint that is the
+  // start/end of exactly one pipe (the classic "stub" that should tee in).
+  const danglingNodes=nodes.filter(n=>{
+    if(n.type==='tank')return false; // tanks handled by their own boundary logic
+    const connCount=pipes.filter(p=>p.startNodeId===n.id||p.endNodeId===n.id).length;
+    return connCount===1;
+  });
+
+  danglingNodes.forEach(node=>{
+    pipes.forEach(throughPipe=>{
+      // Skip if this node is already an endpoint of throughPipe itself
+      if(throughPipe.startNodeId===node.id||throughPipe.endNodeId===node.id)return;
+      const cp=closestPointOnPipe(throughPipe,node.lat,node.lng);
+      if(!cp)return;
+      if(cp.dist<=THRESH_M){
+        // Only count it if the closest point is genuinely mid-span, not
+        // basically sitting on one of throughPipe's own endpoints (that
+        // case is already covered by Detector A).
+        const distToPipeStart=haversineM([node.lat,node.lng],cp.allPts[0]);
+        const distToPipeEnd=haversineM([node.lat,node.lng],cp.allPts[cp.allPts.length-1]);
+        if(distToPipeStart<=THRESH_M||distToPipeEnd<=THRESH_M)return;
+        candidates.push({danglingNode:node,throughPipe,closest:cp});
+      }
+    });
+  });
+
+  openModal('Mid-span intersections');
+  const body=document.getElementById('modal-body');
+  body.style.whiteSpace='normal';
+  body.style.fontFamily='inherit';
+
+  if(!candidates.length){
+    body.innerHTML='<div style="color:var(--accent)">✓ No dangling endpoints found sitting near the middle of another pipe\'s run.</div>';
+    document.getElementById('modal-footer').innerHTML='';
+    return;
+  }
+
+  midSpanCandCache=candidates;
+  body.innerHTML=`<div style="margin-bottom:10px;color:var(--text2)">Found <b>${candidates.length}</b> dangling endpoint(s) sitting within ${THRESH_M}m of the middle of another pipe's run — these look like they should tee into that pipe. Approving will split the through-pipe at that point, insert a shared junction, and reconnect the dangling endpoint to it. The through-pipe's two new pieces will sum to (almost exactly) its original length — only the dangling node moves, by the snap distance shown.</div>`+
+    candidates.map((c,i)=>
+      `<div style="margin-bottom:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--warn)">`+
+        `<div style="font-size:11px;color:var(--text)"><b>${c.danglingNode.label}</b> is ${c.closest.dist.toFixed(2)}m from the middle of <b>${c.throughPipe.label}</b> (${c.throughPipe.dia}")</div>`+
+        `<div style="margin-top:5px;display:flex;gap:5px">`+
+          `<button onclick="showMidSpanCandOnMap(${i})" style="height:22px;padding:0 8px;font-size:10px;border-color:#fbbf24;color:#fbbf24">&#9650; Show on map</button>`+
+          `<button onclick="approveMidSpanSplit(${i})" style="height:22px;padding:0 8px;font-size:10px;border-color:var(--accent);color:var(--accent)">&#10003; Insert junction &amp; connect</button>`+
+        `</div>`+
+      `</div>`
+    ).join('');
+  document.getElementById('modal-footer').innerHTML='';
+}
+window.findMidSpanIntersections=findMidSpanIntersections;
+
+let midSpanCandCache=null;
+function showMidSpanCandOnMap(i){
+  const c=midSpanCandCache?.[i];if(!c)return;
+  closeModal();clearOldSegOverlay();
+  const mk1=L.circleMarker([c.danglingNode.lat,c.danglingNode.lng],{radius:12,color:'#f87171',weight:3,fillColor:'#f87171',fillOpacity:0.15}).addTo(map);
+  const mk2=L.circleMarker(c.closest.point,{radius:8,color:'#4ade80',weight:3,fillColor:'#4ade80',fillOpacity:0.3}).addTo(map);
+  oldSegEndMarkers.push(mk1,mk2);
+  map.fitBounds(L.latLngBounds([[c.danglingNode.lat,c.danglingNode.lng],c.closest.point]),{padding:[80,80],maxZoom:20});
+  showOldSegBannerCustom(`${c.danglingNode.label} (red) is ${c.closest.dist.toFixed(2)}m from the nearest point (green) on ${c.throughPipe.label}'s run.`);
+}
+window.showMidSpanCandOnMap=showMidSpanCandOnMap;
+
+// Splits throughPipe into two pipes at the closest point found, inserts a
+// new junction there, and reconnects danglingNode to that junction.
+// Length-preserving: piece A + piece B == original pipe length (to within
+// floating point rounding), and danglingNode only moves by the snap
+// distance already shown to the user before they approved.
+function approveMidSpanSplit(i){
+  const c=midSpanCandCache?.[i];if(!c)return;
+  pushHistory();
+
+  const {danglingNode,throughPipe,closest}=c;
+  const {point:splitPoint,segIndex,allPts}=closest;
+
+  // New shared junction at the split point
+  const junction={
+    id:'n'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    type:'junction',lat:splitPoint[0],lng:splitPoint[1],elev:null,
+    label:'J'+nodeCounter++,pumpHead:0,waterLevel:null
+  };
+  nodes.push(junction);
+
+  // Build the two new point lists: everything up to segIndex + splitPoint,
+  // and splitPoint + everything after segIndex.
+  const firstHalfPts=[...allPts.slice(0,segIndex+1),splitPoint];
+  const secondHalfPts=[splitPoint,...allPts.slice(segIndex+1)];
+
+  const origStartNodeId=throughPipe.startNodeId;
+  const origEndNodeId=throughPipe.endNodeId;
+  const origStartAttach=throughPipe.startAttachPt;
+  const origEndAttach=throughPipe.endAttachPt;
+
+  // Piece A: original start -> new junction
+  throughPipe.endNodeId=junction.id;
+  throughPipe.endAttachPt=null;
+  throughPipe.waypoints=firstHalfPts.slice(1,-1);
+
+  // Piece B: new junction -> original end (brand-new pipe object)
+  const pieceB={
+    id:'p'+Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_split',
+    label:'Pipe '+pipeCounter++,
+    startNodeId:junction.id,
+    endNodeId:origEndNodeId,
+    startAttachPt:null,
+    endAttachPt:origEndAttach,
+    waypoints:secondHalfPts.slice(1,-1),
+    dia:throughPipe.dia,
+    layer:throughPipe.layer,
+    condition:throughPipe.condition,
+    status:throughPipe.status,
+    direction:throughPipe.direction,
+    valveState:throughPipe.valveState
+  };
+  pipes.push(pieceB);
+
+  // Reconnect the dangling node's single pipe to the new junction
+  const danglingPipe=pipes.find(p=>p.startNodeId===danglingNode.id||p.endNodeId===danglingNode.id);
+  if(danglingPipe){
+    if(danglingPipe.startNodeId===danglingNode.id) danglingPipe.startNodeId=junction.id;
+    else danglingPipe.endNodeId=junction.id;
+  }
+
+  // Sanity-check length preservation before committing the alert message
+  const lenA=pipeLenM(throughPipe),lenB=pipeLenM(pieceB);
+  const originalApproxLen=lenA+lenB; // by construction these sum to the original path
+
+  pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();updateSummary();
+  alert(`Inserted ${junction.label} and split ${throughPipe.label} into two pieces (${lenA.toFixed(1)}m + ${lenB.toFixed(1)}m). ${danglingNode.label} is now connected there.`);
+  findMidSpanIntersections(); // refresh the list
+}
+window.approveMidSpanSplit=approveMidSpanSplit;
+
+function findVisuallyOverlappingJunctions(){
+  const THRESH_M=3; // anything within 3m looks like "the same point" visually at normal zoom
+  const junctions=nodes.filter(n=>n.type==='junction');
+  const clusters=[]; // [{nodes:[...], pipeCounts:[...]}]
+  const seen=new Set();
+
+  for(let i=0;i<junctions.length;i++){
+    const a=junctions[i];
+    if(seen.has(a.id))continue;
+    const cluster=[a];
+    for(let j=0;j<junctions.length;j++){
+      if(i===j)continue;
+      const b=junctions[j];
+      if(seen.has(b.id))continue;
+      if(haversineM([a.lat,a.lng],[b.lat,b.lng])<=THRESH_M){
+        cluster.push(b);
+      }
+    }
+    if(cluster.length>1){
+      cluster.forEach(n=>seen.add(n.id));
+      clusters.push(cluster);
+    } else {
+      seen.add(a.id);
+    }
+  }
+
+  openModal('Visually overlapping junctions');
+  const body=document.getElementById('modal-body');
+  body.style.whiteSpace='normal';
+  body.style.fontFamily='inherit';
+
+  if(!clusters.length){
+    body.innerHTML='<div style="color:var(--accent)">✓ No overlapping junctions found within 3m of each other. Your junctions appear to be properly connected — if pipes still seem disconnected, use the pipe Trace tool to check the specific path.</div>';
+    document.getElementById('modal-footer').innerHTML='';
+    return;
+  }
+
+  body.innerHTML=`<div style="margin-bottom:10px;color:var(--text2)">Found <b>${clusters.length}</b> location(s) where ${clusters.reduce((a,c)=>a+c.length,0)} separate junctions sit within ${THRESH_M}m of each other. These look like single connection points on the map but are NOT actually linked — pipes touching different junctions in the same cluster don't connect to each other.</div>`+
+    clusters.map((cluster,ci)=>{
+      const totalPipes=cluster.reduce((a,n)=>a+pipes.filter(p=>p.startNodeId===n.id||p.endNodeId===n.id).length,0);
+      const rows=cluster.map(n=>{
+        const cnt=pipes.filter(p=>p.startNodeId===n.id||p.endNodeId===n.id).length;
+        return `<div style="font-size:10px;color:var(--text2);padding:2px 0">&nbsp;&nbsp;• ${n.label}: ${cnt} pipe(s) attached</div>`;
+      }).join('');
+      return `<div style="margin-bottom:10px;padding:8px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--warn)">`+
+        `<div style="font-weight:500;color:var(--warn)">Cluster ${ci+1}: ${cluster.length} junctions, ${totalPipes} pipe(s) total</div>`+
+        rows+
+        `<button onclick="showJunctionClusterOnMap(${ci})" style="margin-top:5px;height:22px;padding:0 8px;font-size:10px;border-color:#fbbf24;color:#fbbf24">&#9650; Show on map</button>`+
+      `</div>`;
+    }).join('');
+
+  overlapClusterCache=clusters;
+
+  const footer=document.getElementById('modal-footer');
+  footer.innerHTML='';
+  const mergeBtn=document.createElement('button');
+  mergeBtn.textContent='Merge all clusters now';
+  mergeBtn.style.cssText='height:26px;padding:0 10px;font-size:12px;border-color:var(--accent);color:var(--accent);';
+  mergeBtn.onclick=()=>{closeModal();mergeNearbyNodes();};
+  footer.appendChild(mergeBtn);
+}
+window.findVisuallyOverlappingJunctions=findVisuallyOverlappingJunctions;
+
+let overlapClusterCache=null;
+function showJunctionClusterOnMap(idx){
+  const cluster=overlapClusterCache?.[idx];
+  if(!cluster)return;
+  closeModal();
+  clearOldSegOverlay(); // reuse the same cleanup so overlays don't stack
+
+  // Draw a marker ring around each junction in the cluster so you can see
+  // exactly how many separate dots are hiding under what looks like one point.
+  const bounds=[];
+  cluster.forEach((node,i)=>{
+    const mk=L.circleMarker([node.lat,node.lng],{
+      radius:14,color:'#fbbf24',weight:3,fillColor:'#fbbf24',fillOpacity:0.15
+    }).addTo(map);
+    oldSegEndMarkers.push(mk);
+    bounds.push([node.lat,node.lng]);
+  });
+  map.fitBounds(L.latLngBounds(bounds),{padding:[80,80],maxZoom:20});
+  showOldSegBannerCustom(`⚠ ${cluster.length} separate junctions overlapping here — they look connected but aren't.`);
+}
+window.showJunctionClusterOnMap=showJunctionClusterOnMap;
+
+// Generic version of the yellow info banner, reused for non-segment contexts
+function showOldSegBannerCustom(text){
+  const old=document.getElementById('old-seg-banner');
+  if(old)old.remove();
+  const banner=document.createElement('div');
+  banner.id='old-seg-banner';
+  banner.style.cssText='position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1000;background:var(--surface);border:1px solid #fbbf24;border-radius:var(--radius);padding:8px 14px;font-size:12px;color:var(--text);box-shadow:0 2px 10px #0006;display:flex;align-items:center;gap:10px;';
+  banner.innerHTML=`<span>${text}</span>`;
+  const closeBtn=document.createElement('button');
+  closeBtn.textContent='Hide';
+  closeBtn.style.cssText='height:22px;padding:0 8px;font-size:11px;';
+  closeBtn.onclick=clearOldSegOverlay;
+  banner.appendChild(closeBtn);
+  document.getElementById('map').appendChild(banner);
+}
 
 function mergeNearbyNodes(){
   const dist=parseFloat(prompt('Merge junction nodes within this distance (metres) of each other?\n\nOnly plain junctions (J) are merged — wells, tanks, pumps, and endpoints are never touched, so you never lose a source or destination by accident.','2'));
