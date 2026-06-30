@@ -1510,7 +1510,12 @@ function splitPipeAtPoint(throughPipe,closest){
   const secondHalfPts=[splitPoint,...allPts.slice(segIndex+1)];
 
   const origEndNodeId=throughPipe.endNodeId;
-  const origEndAttach=throughPipe.endAttachPt;
+  // Coerce undefined -> null on every copied field. Firebase's set() throws
+  // and aborts the ENTIRE write if any value anywhere in the tree is
+  // undefined, so any field that simply doesn't exist on the source pipe
+  // object (common for fields added in later app versions) must be
+  // explicitly nulled here rather than passed through as-is.
+  const origEndAttach=throughPipe.endAttachPt??null;
 
   throughPipe.endNodeId=junction.id;
   throughPipe.endAttachPt=null;
@@ -1524,12 +1529,12 @@ function splitPipeAtPoint(throughPipe,closest){
     startAttachPt:null,
     endAttachPt:origEndAttach,
     waypoints:secondHalfPts.slice(1,-1),
-    dia:throughPipe.dia,
-    layer:throughPipe.layer,
-    condition:throughPipe.condition,
-    status:throughPipe.status,
-    direction:throughPipe.direction,
-    valveState:throughPipe.valveState
+    dia:throughPipe.dia??'3',
+    layer:throughPipe.layer??'existing',
+    condition:throughPipe.condition??'good',
+    status:throughPipe.status??'good',
+    direction:throughPipe.direction??'auto',
+    valveState:throughPipe.valveState??'open'
   };
   pipes.push(pieceB);
 
@@ -2794,7 +2799,9 @@ function approveMidSpanSplit(i){
   const secondHalfPts=[splitPoint,...allPts.slice(segIndex+1)];
 
   const origEndNodeId=throughPipe.endNodeId;
-  const origEndAttach=throughPipe.endAttachPt;
+  // Same undefined->null coercion as splitPipeAtPoint — Firebase aborts
+  // the entire write if any field anywhere is undefined.
+  const origEndAttach=throughPipe.endAttachPt??null;
 
   // Piece A: original start -> new junction (mutate the live throughPipe object directly)
   throughPipe.endNodeId=junction.id;
@@ -2810,12 +2817,12 @@ function approveMidSpanSplit(i){
     startAttachPt:null,
     endAttachPt:origEndAttach,
     waypoints:secondHalfPts.slice(1,-1),
-    dia:throughPipe.dia,
-    layer:throughPipe.layer,
-    condition:throughPipe.condition,
-    status:throughPipe.status,
-    direction:throughPipe.direction,
-    valveState:throughPipe.valveState
+    dia:throughPipe.dia??'3',
+    layer:throughPipe.layer??'existing',
+    condition:throughPipe.condition??'good',
+    status:throughPipe.status??'good',
+    direction:throughPipe.direction??'auto',
+    valveState:throughPipe.valveState??'open'
   };
   pipes.push(pieceB);
 
@@ -3023,17 +3030,43 @@ function setSyncStatus(s){
   else{el.className='offline';el.textContent='● offline';}
 }
 function dbRef(){return ref(db,'projects/'+projectId+'/v2');}
+// Recursively replaces every `undefined` value in an object/array tree with
+// `null`. Firebase's set() rejects the ENTIRE write if any value anywhere
+// in the payload is undefined — and because writes happen automatically
+// after almost every edit, a single poisoned field can silently break
+// saving indefinitely with no obvious symptom beyond "stuck on syncing".
+// Running every payload through this before sending guarantees that
+// specific failure class can never happen again, regardless of which
+// code path introduced the bad value.
+function sanitizeForFirebase(value){
+  if(value===undefined) return null;
+  if(value===null) return null;
+  if(Array.isArray(value)) return value.map(sanitizeForFirebase);
+  if(typeof value==='object'){
+    const out={};
+    for(const k in value) out[k]=sanitizeForFirebase(value[k]);
+    return out;
+  }
+  return value;
+}
+
 function pushToFirebase(){
   setSyncStatus('syncing');ignoreNext=true;
-  set(dbRef(),{
+  const payload=sanitizeForFirebase({
     nodes:nodes.length?nodes:null,
     pipes:pipes.length?pipes:null,
     elevPts:elevPts.length?elevPts:null,
     zones:zones.length?zones:null,
     sections:sections.length?sections:null,
     schedules:Object.keys(schedules).length?schedules:null
-  }).then(()=>{setSyncStatus('synced');document.getElementById('save-status').textContent='Saved '+new Date().toLocaleTimeString();})
-  .catch(()=>setSyncStatus('offline'));
+  });
+  set(dbRef(),payload)
+    .then(()=>{setSyncStatus('synced');document.getElementById('save-status').textContent='Saved '+new Date().toLocaleTimeString();})
+    .catch(err=>{
+      setSyncStatus('offline');
+      console.error('Firebase save failed:',err);
+      document.getElementById('save-status').textContent='Save failed — see console';
+    });
 }
 function subscribeToProject(){
   if(fbUnsub){fbUnsub();fbUnsub=null;}
@@ -3180,10 +3213,15 @@ function renderPipeList(){
     if(sel.zoneAreaDunum) document.getElementById('ep-zone-area').value=sel.zoneAreaDunum;
     if(sel.treeSpacing)   document.getElementById('ep-zone-spacing').value=sel.treeSpacing;
     document.getElementById('ep-zone-result').innerHTML='';
-    const snLbl=sn?(sn.label||sn.type):'missing node';
-    const enLbl=en?(en.label||en.type):'missing node';
+    // sn/en here are for the SELECTED pipe specifically — must be looked up
+    // fresh, since the sn/en inside the forEach above are scoped to that
+    // loop only and don't exist out here.
+    const selSn=nodes.find(n=>n.id===sel.startNodeId);
+    const selEn=nodes.find(n=>n.id===sel.endNodeId);
+    const snLbl=selSn?(selSn.label||selSn.type):'missing node';
+    const enLbl=selEn?(selEn.label||selEn.type):'missing node';
     document.getElementById('ep-endpoints-info').innerHTML=
-      `Start: <b>${snLbl}</b> (${sn?sn.type:'?'}) &nbsp;→&nbsp; End: <b>${enLbl}</b> (${en?en.type:'?'})`;
+      `Start: <b>${snLbl}</b> (${selSn?selSn.type:'?'}) &nbsp;→&nbsp; End: <b>${enLbl}</b> (${selEn?selEn.type:'?'})`;
   } else ep.classList.remove('visible');
 }
 window._delPipe=(i,e)=>{e.stopPropagation();pushHistory();if(selectedPipeId===pipes[i].id)selectedPipeId=null;pipes.splice(i,1);pushToFirebase();pipeLayer.redraw();renderPipeList();renderNodeMarkers();updateSummary();};
