@@ -442,7 +442,18 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
           <button onclick="calcZoneEstimate()" style="width:100%;height:24px;font-size:11px;margin-top:4px;border-color:var(--accent);color:var(--accent)">&#9654; Estimate feeders</button>
           <div id="ep-zone-result" style="margin-top:6px;font-size:10px;color:var(--text2);line-height:1.7"></div>
         </div>
+        <div class="ep-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+          <label style="width:auto">Endpoints</label>
+        </div>
+        <div id="ep-endpoints-info" style="font-size:10px;color:var(--text2);margin-bottom:5px"></div>
         <div class="ep-actions">
+          <button onclick="startReconnect('start')" id="btn-reconnect-start" style="flex:1">&#9678; Reconnect start</button>
+          <button onclick="startReconnect('end')" id="btn-reconnect-end" style="flex:1">&#9678; Reconnect end</button>
+        </div>
+        <div id="reconnect-hint" style="display:none;font-size:10px;color:var(--warn);margin-top:5px;padding:5px 7px;background:var(--warn-bg);border-radius:var(--radius)">
+          Click a node or tank on the map to reconnect, or press Escape to cancel.
+        </div>
+        <div class="ep-actions" style="margin-top:8px">
           <button class="ep-apply" onclick="applyPipeEdit()">&#10003; Apply</button>
           <button class="danger"   onclick="deleteSelectedPipe()">&#215; Delete</button>
         </div>
@@ -930,6 +941,7 @@ function renderNodeMarkers(){
       shape.bindTooltip(node.label||'tank',{permanent:false,direction:'top'});
       shape.on('click',e=>{
         L.DomEvent.stopPropagation(e);
+        if(tryConsumeReconnectClick(node,e.latlng.lat,e.latlng.lng))return;
         if(mode==='pipe') handleNodeClickWhileDrawing(node,e.latlng.lat,e.latlng.lng);
         else if(mode==='select') selectNode(node.id);
         else if(mode==='node') reshapeTank(node);
@@ -945,6 +957,7 @@ function renderNodeMarkers(){
       }).addTo(map);
       mk.on('click',e=>{
         L.DomEvent.stopPropagation(e);
+        if(tryConsumeReconnectClick(node,e.latlng.lat,e.latlng.lng))return;
         if(mode==='pipe') handleNodeClickWhileDrawing(node);
         else if(mode==='select') selectNode(node.id);
       });
@@ -957,6 +970,7 @@ function renderNodeMarkers(){
       .addTo(map);
     mk.on('click',e=>{
       L.DomEvent.stopPropagation(e);
+      if(tryConsumeReconnectClick(node))return;
       if(mode==='pipe'){
         // Clicking a node while drawing a pipe: snap start or end
         handleNodeClickWhileDrawing(node);
@@ -1395,7 +1409,56 @@ async function placeElevPoint(lat,lng){
 }
 
 // ── Selection ──────────────────────────────────────────
-function selectPipe(id){selectedPipeId=id;selectedNodeId=null;switchTab('pipes');renderPipeList();pipeLayer.redraw();}
+// ── Pipe endpoint reconnection ─────────────────────────
+let reconnectingPipeId=null, reconnectingEnd=null; // 'start' | 'end'
+
+function startReconnect(which){
+  if(!selectedPipeId)return;
+  reconnectingPipeId=selectedPipeId;
+  reconnectingEnd=which;
+  document.getElementById('reconnect-hint').style.display='block';
+  document.getElementById('btn-reconnect-start').classList.toggle('active',which==='start');
+  document.getElementById('btn-reconnect-end').classList.toggle('active',which==='end');
+}
+window.startReconnect=startReconnect;
+
+function cancelReconnect(){
+  reconnectingPipeId=null;reconnectingEnd=null;
+  document.getElementById('reconnect-hint').style.display='none';
+  document.getElementById('btn-reconnect-start')?.classList.remove('active');
+  document.getElementById('btn-reconnect-end')?.classList.remove('active');
+}
+
+// Called by node/tank click handlers BEFORE normal select/pipe-draw behaviour.
+// Returns true if the click was consumed by an in-progress reconnect.
+function tryConsumeReconnectClick(node,clickLat,clickLng){
+  if(!reconnectingPipeId)return false;
+  const pipe=pipes.find(p=>p.id===reconnectingPipeId);
+  if(!pipe){cancelReconnect();return false;}
+
+  pushHistory();
+  let attachPt=null;
+  if(node.type==='tank'){
+    const r=closestPointOnTankBoundary(node,clickLat??node.lat,clickLng??node.lng);
+    attachPt=r.point;
+  }
+  if(reconnectingEnd==='start'){
+    pipe.startNodeId=node.id;
+    pipe.startAttachPt=attachPt;
+  } else {
+    pipe.endNodeId=node.id;
+    pipe.endAttachPt=attachPt;
+  }
+  cancelReconnect();
+  pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();updateSummary();
+  return true;
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&reconnectingPipeId) cancelReconnect();
+});
+
+function selectPipe(id){selectedPipeId=id;selectedNodeId=null;cancelReconnect();switchTab('pipes');renderPipeList();pipeLayer.redraw();}
 function selectNode(id){selectedNodeId=id;selectedPipeId=null;switchTab('nodes');renderNodeList();pipeLayer.redraw();}
 
 // ── Edit handlers ──────────────────────────────────────
@@ -1861,6 +1924,10 @@ function renderPipeList(){
     if(sel.zoneAreaDunum) document.getElementById('ep-zone-area').value=sel.zoneAreaDunum;
     if(sel.treeSpacing)   document.getElementById('ep-zone-spacing').value=sel.treeSpacing;
     document.getElementById('ep-zone-result').innerHTML='';
+    const snLbl=sn?(sn.label||sn.type):'missing node';
+    const enLbl=en?(en.label||en.type):'missing node';
+    document.getElementById('ep-endpoints-info').innerHTML=
+      `Start: <b>${snLbl}</b> (${sn?sn.type:'?'}) &nbsp;→&nbsp; End: <b>${enLbl}</b> (${en?en.type:'?'})`;
   } else ep.classList.remove('visible');
 }
 window._delPipe=(i,e)=>{e.stopPropagation();pushHistory();if(selectedPipeId===pipes[i].id)selectedPipeId=null;pipes.splice(i,1);pushToFirebase();pipeLayer.redraw();renderPipeList();renderNodeMarkers();updateSummary();};
@@ -2306,6 +2373,7 @@ function renderNodeMarkersWithPressure(nodeHeads){
       shape.bindTooltip(tooltip,{permanent:false,direction:'top'});
       shape.on('click',e=>{
         L.DomEvent.stopPropagation(e);
+        if(tryConsumeReconnectClick(node,e.latlng.lat,e.latlng.lng))return;
         if(mode==='pipe') handleNodeClickWhileDrawing(node,e.latlng.lat,e.latlng.lng);
         else if(mode==='select') selectNode(node.id);
         else if(mode==='node') reshapeTank(node);
@@ -2320,6 +2388,7 @@ function renderNodeMarkersWithPressure(nodeHeads){
       }).bindTooltip(tooltip,{permanent:false,direction:'top',offset:[0,-12]}).addTo(map);
       mk.on('click',e=>{
         L.DomEvent.stopPropagation(e);
+        if(tryConsumeReconnectClick(node,e.latlng.lat,e.latlng.lng))return;
         if(mode==='pipe') handleNodeClickWhileDrawing(node);
         else if(mode==='select') selectNode(node.id);
       });
@@ -2336,6 +2405,7 @@ function renderNodeMarkersWithPressure(nodeHeads){
       .addTo(map);
     mk.on('click',e=>{
       L.DomEvent.stopPropagation(e);
+      if(tryConsumeReconnectClick(node))return;
       if(mode==='pipe') handleNodeClickWhileDrawing(node);
       else if(mode==='select') selectNode(node.id);
     });
