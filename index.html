@@ -607,6 +607,18 @@ table.sum-t tfoot td{border-bottom:none;border-top:1px solid var(--border2);font
 </div><!-- /main -->Pipe: click start node or map to begin, click end node or double-click to finish &nbsp;·&nbsp; Node: click map to place &nbsp;·&nbsp; Select: click any element</div>
 </div>
 
+<!-- Generic scrollable modal, used for raw old data inspection and similar long output -->
+<div id="modal-overlay" style="display:none;position:fixed;inset:0;background:#000a;z-index:9000;align-items:center;justify-content:center;">
+  <div id="modal-box" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);width:min(700px,92vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 30px #0008;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div id="modal-title" style="font-size:13px;font-weight:600;color:var(--accent);"></div>
+      <button onclick="closeModal()" style="height:26px;padding:0 10px;font-size:12px;">&#10005; Close</button>
+    </div>
+    <div id="modal-body" style="padding:12px 14px;overflow-y:auto;flex:1;font-size:11px;line-height:1.6;white-space:pre-wrap;font-family:monospace;user-select:text;"></div>
+    <div id="modal-footer" style="padding:8px 14px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:6px;"></div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module">
 import { initializeApp }                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -1966,7 +1978,30 @@ window.migrateSegments=migrateSegments;
 // lists every segment with its computed length, diameter, status, and full
 // coordinate array — so a specific lost pipe can be identified by its real
 // length/shape and recovered directly, rather than redrawn from memory.
+// ── Generic modal helpers ──────────────────────────────
+function openModal(title){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML='';
+  document.getElementById('modal-footer').innerHTML='';
+  document.getElementById('modal-overlay').style.display='flex';
+}
+function closeModal(){
+  document.getElementById('modal-overlay').style.display='none';
+}
+window.closeModal=closeModal;
+document.getElementById('modal-overlay').addEventListener('click',e=>{
+  if(e.target.id==='modal-overlay') closeModal();
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&document.getElementById('modal-overlay').style.display==='flex') closeModal();
+});
+
+let rawOldSegsCache=null; // cached so clicking a list item doesn't re-fetch from Firebase
+
 function viewRawOldData(){
+  openModal('Raw old segment data');
+  document.getElementById('modal-body').innerHTML='<div style="color:var(--text3)">Loading from Firebase…</div>';
+
   import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js').then(({get})=>{
     Promise.all([
       get(ref(db,'projects/'+projectId+'/segments')),
@@ -1980,41 +2015,67 @@ function viewRawOldData(){
         const nested=Array.isArray(dataVal.segments)?dataVal.segments:Object.values(dataVal.segments);
         segs=segs.concat(nested);
       }
-      if(!segs.length){alert('No raw old data found under "segments" or "data.segments" for this project.');return;}
+      if(!segs.length){
+        document.getElementById('modal-body').innerHTML='No raw old data found under "segments" or "data.segments" for this project.';
+        return;
+      }
 
-      // Compute length for each using the same haversine logic as everywhere else
       const withLen=segs.map((seg,i)=>{
         const pts=seg.latlngs||[];
         let len=0;
         for(let j=0;j<pts.length-1;j++) len+=haversineM(pts[j],pts[j+1]);
         return {idx:i,dia:seg.dia,layer:seg.layer,status:seg.status,len,latlngs:pts};
       });
-
-      // Show a summary list first, sorted longest-first so the big lost
-      // pipes (1124m, 422.6m) are easy to spot at the top.
       withLen.sort((a,b)=>b.len-a.len);
-      const summary=withLen.map(s=>
-        `[${s.idx}] ${s.dia}", ${s.len.toFixed(1)}m, ${s.layer}/${s.status}, ${s.latlngs.length} points`
-      ).join('\n');
+      rawOldSegsCache=withLen;
 
-      const pick=prompt(
-        `Found ${segs.length} raw old segment(s). Listed longest-first below.\n\n`+
-        `Enter the [index] number of the one you want to recover (its full coordinates will be shown next), or Cancel to just read this list:\n\n`+
-        summary
-      );
-      if(pick===null||pick.trim()==='')return;
-      const idx=parseInt(pick,10);
-      const target=withLen.find(s=>s.idx===idx);
-      if(!target){alert('Invalid index.');return;}
-
-      const coordList=target.latlngs.map(p=>`[${p[0].toFixed(6)}, ${p[1].toFixed(6)}]`).join(',\n');
-      alert(`Segment [${target.idx}] — ${target.dia}", ${target.len.toFixed(1)}m, ${target.layer}/${target.status}\n\n`+
-        `Raw coordinates (lat, lng) — ${target.latlngs.length} points:\n${coordList}\n\n`+
-        `You can use these to manually re-trace this pipe: open Google Maps or Google Earth, drop pins at these exact coordinates to see where it runs on the ground, then redraw it in PipeMap's Pipe mode following the same path.`);
-    }).catch(err=>alert('Failed to read old data: '+err.message));
+      const body=document.getElementById('modal-body');
+      body.style.whiteSpace='normal';
+      body.style.fontFamily='inherit';
+      body.innerHTML=`<div style="margin-bottom:8px;color:var(--text2)">Found ${segs.length} raw segment(s), sorted longest first. Click any row to see its full coordinates.</div>`+
+        withLen.map(s=>
+          `<div onclick="showRawSegDetail(${s.idx})" style="padding:6px 8px;margin-bottom:3px;border-radius:4px;background:var(--surface2);cursor:pointer;border:1px solid var(--border)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">`+
+            `<b>${s.dia}"</b> &nbsp; ${s.len.toFixed(1)}m &nbsp; <span style="color:var(--text2)">${s.layer}/${s.status}</span> &nbsp; <span style="color:var(--text3);font-size:10px">${s.latlngs.length} points</span>`+
+          `</div>`
+        ).join('');
+    }).catch(err=>{
+      document.getElementById('modal-body').innerHTML='Failed to read old data: '+err.message;
+    });
   });
 }
 window.viewRawOldData=viewRawOldData;
+
+function showRawSegDetail(idx){
+  const target=rawOldSegsCache?.find(s=>s.idx===idx);
+  if(!target)return;
+
+  openModal(`Segment [${idx}] — ${target.dia}", ${target.len.toFixed(1)}m, ${target.layer}/${target.status}`);
+  const body=document.getElementById('modal-body');
+  body.style.whiteSpace='pre-wrap';
+  body.style.fontFamily='monospace';
+
+  const coordText=target.latlngs.map(p=>`${p[0].toFixed(6)}, ${p[1].toFixed(6)}`).join('\n');
+  body.textContent=`${target.latlngs.length} points (lat, lng):\n\n${coordText}`;
+
+  const footer=document.getElementById('modal-footer');
+  footer.innerHTML='';
+  const backBtn=document.createElement('button');
+  backBtn.textContent='← Back to list';
+  backBtn.style.cssText='height:26px;padding:0 10px;font-size:12px;';
+  backBtn.onclick=viewRawOldData;
+  const copyBtn=document.createElement('button');
+  copyBtn.textContent='Copy coordinates';
+  copyBtn.style.cssText='height:26px;padding:0 10px;font-size:12px;border-color:var(--accent);color:var(--accent);';
+  copyBtn.onclick=()=>{
+    navigator.clipboard.writeText(coordText).then(()=>{
+      copyBtn.textContent='Copied!';
+      setTimeout(()=>{copyBtn.textContent='Copy coordinates';},1500);
+    });
+  };
+  footer.appendChild(backBtn);
+  footer.appendChild(copyBtn);
+}
+window.showRawSegDetail=showRawSegDetail;
 
 function mergeNearbyNodes(){
   const dist=parseFloat(prompt('Merge junction nodes within this distance (metres) of each other?\n\nOnly plain junctions (J) are merged — wells, tanks, pumps, and endpoints are never touched, so you never lose a source or destination by accident.','2'));
