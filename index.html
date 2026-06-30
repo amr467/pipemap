@@ -1098,11 +1098,68 @@ function renderNodeMarkers(){
       node.lat=ll.lat;node.lng=ll.lng;
       pipeLayer.redraw(); // live-update attached pipes while dragging
     });
-    mk.on('dragend',()=>{
-      pushToFirebase();renderNodeList();updateSummary();
+    mk.on('dragend',e=>{
+      finalizeNodeDrag(node,e.target);
     });
     nodeLeafletMarkers[node.id]=mk;
   });
+}
+
+// Called when a dragged node is released. Checks for a snap target in
+// priority order: an existing node first (in which case the dragged node
+// is merged away rather than left overlapping it — repointing its pipes
+// onto the target, exactly like Merge Nearby Nodes does), then a mid-span
+// point on another pipe's line (split + insert junction, same as live
+// drawing), and only if neither applies does the node simply stay at the
+// dropped position.
+//
+// SAFETY: merging-away only ever happens if the DRAGGED node is a plain
+// junction. Wells, tanks, pumps, and endpoints are never deleted by a
+// drag — they always just move to the dropped position, even if that
+// happens to land near another node. This mirrors the same protection
+// Merge Nearby Nodes already applies, so a real source can't vanish from
+// an accidental or imprecise drag.
+function finalizeNodeDrag(node,marker){
+  if(node.type!=='junction'){
+    // Real source/endpoint — never merge it away. Just keep it at the
+    // dropped position; pipes follow automatically since they read the
+    // node's live lat/lng on every redraw.
+    pushToFirebase();renderNodeList();updateSummary();
+    return;
+  }
+
+  const snapResult=nearestNodeWithSnap(node.lat,node.lng,node.id);
+
+  if(snapResult&&snapResult.node){
+    const target=snapResult.node;
+    // Repoint every pipe referencing the dragged node onto the target instead
+    pipes.forEach(p=>{
+      if(p.startNodeId===node.id){p.startNodeId=target.id;p.startAttachPt=target.type==='tank'?closestPointOnTankBoundary(target,node.lat,node.lng).point:null;}
+      if(p.endNodeId===node.id){p.endNodeId=target.id;p.endAttachPt=target.type==='tank'?closestPointOnTankBoundary(target,node.lat,node.lng).point:null;}
+    });
+    nodes=nodes.filter(n=>n.id!==node.id);
+    if(selectedNodeId===node.id)selectedNodeId=target.id;
+    pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();
+    return;
+  }
+
+  const midSpan=findNearestMidSpanPoint(node.lat,node.lng,node.id);
+  if(midSpan){
+    // Insert a junction at the mid-span point, then merge the dragged node
+    // into it the same way as the node-snap case above.
+    const junction=splitPipeAtPoint(midSpan.pipe,midSpan.closest);
+    pipes.forEach(p=>{
+      if(p.startNodeId===node.id)p.startNodeId=junction.id;
+      if(p.endNodeId===node.id)p.endNodeId=junction.id;
+    });
+    nodes=nodes.filter(n=>n.id!==node.id);
+    if(selectedNodeId===node.id)selectedNodeId=junction.id;
+    pushToFirebase();renderNodeMarkers();pipeLayer.redraw();renderPipeList();renderNodeList();updateSummary();
+    return;
+  }
+
+  // No snap target — node just stays where it was dropped.
+  pushToFirebase();renderNodeList();updateSummary();
 }
 function isUnconnected(node){
   if(node.type==='junction')return false; // junctions auto-created, always connected
